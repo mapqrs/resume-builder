@@ -1,5 +1,8 @@
 # Resume Builder
 
+[![CI](https://github.com/mapqrs/resume-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/mapqrs/resume-builder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A local-only tool that turns a structured "master resume" into a JD-tailored
 `.docx` (or `.pdf`) — plus a matching cover letter and a LinkedIn profile.
 The same data, polished three different ways for the three places a recruiter
