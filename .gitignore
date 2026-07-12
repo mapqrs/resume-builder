@@ -9,6 +9,7 @@ __pycache__/
 .env
 master.yaml
 master.yaml.bak.*
+applications.json
 out/
 sessions/
 drafts/

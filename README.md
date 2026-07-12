@@ -116,7 +116,7 @@ Fabrication is detected, not assumed-away.
 
 ## Web UI panels
 
-Six panels surface after generation:
+Seven panels surface after generation:
 
 - **JD signals** — what the heuristic extractor pulled from your JD
   (must-haves, top keywords, inferred seniority, role archetype). Click
@@ -135,6 +135,11 @@ Six panels surface after generation:
   appears inline alongside the `.docx`. Guard warnings (numbers/proper
   nouns not grounded in the master) surface here too. Unlike the resume
   guard, cover-letter paragraphs are kept whole — warnings are advisory.
+- **History** — every résumé you generate is logged (the JD, its ATS
+  score, the length/seniority you used, and when), so you can see your
+  whole job search at a glance and spot which applications scored well.
+  Metadata only — no files are stored, and it's wiped by **Delete my
+  data**.
 
 ## Make it yours
 

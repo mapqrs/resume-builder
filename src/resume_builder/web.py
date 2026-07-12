@@ -30,6 +30,7 @@ from flask import (
     url_for,
 )
 
+from . import applications
 from .ats import score_ats
 from .cover_letter import (
     CoverLetterWarning,
@@ -255,6 +256,10 @@ def _jd_and_signals_for_input(
     raise ValueError("either jd_text or target_role_json is required")
 
 
+def _applications_path() -> Path:
+    return Path(app.config.get("APPLICATIONS_PATH", Path.cwd() / "applications.json"))
+
+
 def _docx_response(
     master: Master,
     template: Template,
@@ -264,6 +269,7 @@ def _docx_response(
     guard_warnings: list[GuardWarning] | None = None,
     signals: JDSignals | None = None,
     jd_text: str | None = None,
+    from_target_role: bool = False,
 ):
     """Render the docx, stream it, attach guard + lint + JD signal data as headers,
     and stash the result in the cache so /api/diff can read it back.
@@ -324,18 +330,33 @@ def _docx_response(
         exposed.append("X-Bock-Formatting")
     # ATS report: extract plain text from the rendered docx (what an ATS parser
     # would see) and score it against the JD's keyword set.
+    ats_report = None
     if tailored is not None and (signals is not None or (pointers and pointers.must_include)):
         try:
             docx_text, _ = extract_text("rendered.docx", payload)
-            report = score_ats(docx_text, signals=signals, pointers=pointers)
-            resp.headers["X-ATS-Report"] = json.dumps(report.model_dump())[:8192]
+            ats_report = score_ats(docx_text, signals=signals, pointers=pointers)
+            resp.headers["X-ATS-Report"] = json.dumps(ats_report.model_dump())[:8192]
             exposed.append("X-ATS-Report")
         except Exception:  # noqa: BLE001 — ATS is advisory; never fail the response
-            pass
+            ats_report = None
     if tailored is not None and jd_text is not None:
         rid = _store_result(master, tailored, jd_text, guard_warnings or [])
         resp.headers["X-Result-Id"] = rid
         exposed.append("X-Result-Id")
+        # Log the application (best-effort — a logging failure must never break
+        # the download the user is waiting on).
+        try:
+            applications.record(
+                _applications_path(),
+                signals=signals,
+                pointers=pointers,
+                jd_text=jd_text,
+                ats_report=ats_report,
+                from_target_role=from_target_role,
+                guard_dropped=len(guard_warnings or []),
+            )
+        except Exception:  # noqa: BLE001
+            pass
     if exposed:
         resp.headers["Access-Control-Expose-Headers"] = ", ".join(exposed)
     return resp
@@ -447,6 +468,21 @@ def load_sample():
     })
 
 
+@app.route("/api/applications", methods=["GET"])
+def api_applications():
+    """List past résumé generations, newest first (the applications tracker)."""
+    apps = applications.load(_applications_path())
+    return jsonify({"applications": [a.model_dump() for a in apps]})
+
+
+@app.route("/api/applications/<app_id>", methods=["DELETE"])
+def api_delete_application(app_id: str):
+    """Remove one application record. 404 when the id isn't found."""
+    if not applications.delete(app_id, _applications_path()):
+        return jsonify({"error": "not_found", "id": app_id}), 404
+    return jsonify({"ok": True, "deleted": app_id})
+
+
 @app.route("/api/generate", methods=["POST"])
 def api_generate():
     """Tailor via `claude -p` and return the rendered .docx.
@@ -466,6 +502,7 @@ def api_generate():
             "hint": "Paste a JD, or fill the target-role form (no-JD mode).",
         }), 400
 
+    used_target_role = not jd_text and target_role is not None
     try:
         jd_text, signals = _jd_and_signals_for_input(jd_text, target_role)
     except ValueError as e:
@@ -509,7 +546,7 @@ def api_generate():
     return _docx_response(
         master, template, guard.cleaned, "resume.docx",
         pointers=pointers, guard_warnings=guard.warnings,
-        signals=signals, jd_text=jd_text,
+        signals=signals, jd_text=jd_text, from_target_role=used_target_role,
     )
 
 
@@ -555,6 +592,7 @@ def api_from_response():
             "error": "jd_text or target_role_json is required (used for guard validation)",
         }), 400
 
+    used_target_role = not jd_text and target_role is not None
     try:
         jd_text, signals = _jd_and_signals_for_input(jd_text, target_role)
     except ValueError as e:
@@ -569,7 +607,7 @@ def api_from_response():
     return _docx_response(
         master, template, guard.cleaned, "resume.docx",
         pointers=pointers, guard_warnings=guard.warnings,
-        signals=signals, jd_text=jd_text,
+        signals=signals, jd_text=jd_text, from_target_role=used_target_role,
     )
 
 
@@ -1109,6 +1147,15 @@ def api_delete_my_data():
             removed.append(str(drafts_dir))
         except OSError as e:
             errors.append(f"could not remove {drafts_dir}: {e}")
+
+    # 4. applications.json — the generation log (JD snippets + ATS history).
+    apps_file = Path(app.config.get("APPLICATIONS_PATH", root / "applications.json"))
+    if apps_file.is_file():
+        try:
+            apps_file.unlink()
+            removed.append(str(apps_file))
+        except OSError as e:
+            errors.append(f"could not remove {apps_file}: {e}")
 
     payload = {
         "removed_paths": removed,

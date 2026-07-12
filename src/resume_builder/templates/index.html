@@ -388,6 +388,10 @@
         <button type="button" data-tab="cover">
           Cover letter
         </button>
+        <button type="button" data-tab="history">
+          History
+          <span class="badge hidden" id="history-badge-tab">0</span>
+        </button>
       </div>
       <div class="spacer"></div>
       <span class="hint" id="result-name"></span>
@@ -535,6 +539,30 @@
               </article>
             </div>
             <div id="cover-warnings-body" style="margin-top: 14px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== HISTORY (applications tracker) ============== -->
+      <section class="pane" data-pane="history">
+        <div class="card">
+          <div class="card-head">
+            <h3>Applications</h3>
+            <div class="right">
+              <span class="hint" id="history-count-note"></span>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="hint" style="margin-top: 0;">
+              Every résumé you generate is logged here — the JD, its ATS score,
+              and when. Metadata only; nothing leaves your machine. Cleared by
+              <em>Delete my data</em>.
+            </p>
+            <div id="history-empty" class="hint" style="padding: 18px 0;">
+              No résumés generated yet. Paste a JD on the left and click
+              <strong>Generate resume</strong>.
+            </div>
+            <div id="history-list" class="history-list"></div>
           </div>
         </div>
       </section>
@@ -1154,6 +1182,7 @@
     setStatus(`Downloaded ${downloadName}.`, 'ok');
     const sizeKb = Math.round(blob.size / 102.4) / 10;
     setGenMeta(`done · ${elapsed}s`, `${sizeKb} KB`);
+    loadApplications();  // server logged this generation — refresh the History tab
 
     // Phase 8: also convert to PDF when the user opted in.
     if (document.getElementById('opt-also-pdf')?.checked) {
@@ -1583,11 +1612,83 @@
       const body = await res.json();
       const removed = (body.removed_paths || []).length;
       setStatus(`Deleted ${removed} item${removed === 1 ? '' : 's'}.`, 'ok');
+      loadApplications();  // applications.json may have been wiped
     } catch (err) {
       setStatus(`Delete failed: ${err.message}`, 'error');
     }
   }
   document.getElementById('btn-delete-my-data')?.addEventListener('click', deleteMyData);
+
+  // ---------- Applications tracker (History tab) ----------
+  function appWhen(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso || '';
+    const mins = Math.round((Date.now() - d.getTime()) / 60000);
+    if (mins < 2) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + ' h ago';
+    const days = Math.round(hrs / 24);
+    if (days < 8) return days + ' days ago';
+    return d.toISOString().slice(0, 10);
+  }
+  function atsToneClass(score) {
+    if (score == null) return '';
+    if (score >= 0.8) return 'tone-good';
+    if (score >= 0.6) return 'tone-warn';
+    return 'tone-bad';
+  }
+  async function loadApplications() {
+    let list = [];
+    try {
+      const res = await fetch('/api/applications');
+      if (res.ok) list = (await res.json()).applications || [];
+    } catch (_) { return; }
+    const badge = document.getElementById('history-badge-tab');
+    const empty = document.getElementById('history-empty');
+    const note = document.getElementById('history-count-note');
+    const wrap = document.getElementById('history-list');
+    if (!wrap) return;
+    badge.textContent = list.length;
+    badge.classList.toggle('hidden', list.length === 0);
+    empty.classList.toggle('hidden', list.length > 0);
+    note.textContent = list.length ? `${list.length} generation${list.length === 1 ? '' : 's'}` : '';
+    wrap.innerHTML = '';
+    list.forEach((a) => {
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      const pct = a.ats_score == null ? null : Math.round(a.ats_score * 100);
+      const chips = [];
+      if (pct != null) chips.push(`<span class="chip ${atsToneClass(a.ats_score)}">ATS ${pct}% · ${a.ats_matched}/${a.ats_total}</span>`);
+      if (a.length) chips.push(`<span class="chip">${escapeHtml(a.length)}</span>`);
+      if (a.seniority) chips.push(`<span class="chip">${escapeHtml(a.seniority)}</span>`);
+      if (a.from_target_role) chips.push(`<span class="chip">target role</span>`);
+      if (a.guard_dropped) chips.push(`<span class="chip tone-warn">${a.guard_dropped} dropped by guard</span>`);
+      const meta = escapeHtml(appWhen(a.created_at)) +
+        (a.jd_snippet ? ' · ' + escapeHtml(a.jd_snippet.slice(0, 90)) : '');
+      row.innerHTML =
+        `<div class="history-main">` +
+          `<div class="history-label">${escapeHtml(a.label)}</div>` +
+          `<div class="history-meta">${meta}</div>` +
+          `<div class="history-chips">${chips.join('')}</div>` +
+        `</div>`;
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'history-delete';
+      del.title = 'Remove from history';
+      del.setAttribute('aria-label', 'Remove from history');
+      del.textContent = '×';
+      del.addEventListener('click', async () => {
+        try {
+          const r = await fetch('/api/applications/' + encodeURIComponent(a.id), { method: 'DELETE' });
+          if (r.ok) loadApplications();
+        } catch (_) { /* ignore */ }
+      });
+      row.appendChild(del);
+      wrap.appendChild(row);
+    });
+  }
+  loadApplications();
 </script>
 
 <!-- Phase 9 — persistent privacy footer -->

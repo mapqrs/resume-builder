@@ -145,17 +145,35 @@ progress (chunks dumped / drafts / saved-to-master), plus **Continue** and
 Files: `wizard.py` (routes), `templates/wizard.html`, `static/wizard.js`,
 `static/wizard.css`, `tests/test_resume_import.py` (gallery tests).
 
+### 11. Applications tracker
+*Shipped 2026-07-12.*
+
+Every résumé generation (auto or copy-paste render) now appends one record to
+`applications.json` — a derived JD label, a JD snippet, the ATS coverage score,
+the pointers used, and a timestamp — surfaced as a **History** tab on the home
+page (newest-first cards with colour-coded ATS chips and per-row delete). Turns
+the tool into a job-search companion you return to per application. Metadata
+only (no résumé files stored; the web UI streams the `.docx`); the log lives
+next to `master.yaml` and is wiped by **Delete my data**. Recording is
+best-effort — a logging failure never breaks the download.
+
+Files: `src/resume_builder/applications.py` (new: record/load/delete, capped at
+500), `web.py` (record hook in `_docx_response`, `GET /api/applications`,
+`DELETE /api/applications/<id>`, delete-my-data), `templates/index.html`,
+`static/style.css`, `.gitignore`, `tests/test_applications.py` (15 new tests,
+incl. an end-to-end generation → record).
+
 ---
 
 ## 🎯 High impact, next up
 
-### Applications tracker (sessions gallery, phase 2)
-**Impact: medium-high · Effort: medium**
+### Applications tracker, phase 2 — richer records
+**Impact: medium · Effort: small-medium**
 
-Extend the sessions gallery into a job-search companion: each generated résumé
-with its JD, ATS score, and date, so the tool becomes something people return
-to per application instead of a one-shot generator. Files: `web.py` (record
-generations), a small on-disk index next to `out/`, `index.html`.
+Build on the History tab: let the user re-download a past résumé (persist the
+`.docx` alongside the record, opt-in), add a company/status field
+(applied / interviewing / offer / rejected) they can set per row, and filter or
+search the list. Files: `applications.py`, `web.py`, `index.html`.
 
 ---
 

@@ -1203,6 +1203,33 @@ label.field > .lbl {
 .btn-sample:disabled { opacity: 0.6; cursor: default; }
 
 /* =========================================================
+   APPLICATIONS TRACKER (History tab)
+   ========================================================= */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--paper);
+}
+.history-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.history-label { font-weight: 600; font-size: 13.5px; color: var(--ink); }
+.history-meta {
+  font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.history-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.history-delete {
+  flex: none;
+  width: 24px; height: 24px; line-height: 1;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--panel); color: var(--muted);
+  font-size: 15px; cursor: pointer;
+}
+.history-delete:hover { border-color: var(--bad-ln); color: var(--bad); background: var(--bad-bg); }
+
+/* =========================================================
    TEMPLATE CUSTOMIZER  (adoption A1)
    ========================================================= */
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
