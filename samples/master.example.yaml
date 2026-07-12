@@ -1,0 +1,91 @@
+# Sample master.yaml — clone-friendly starter for non-developers.
+#
+# Replace the placeholder content with your own. The wizard at /wizard
+# walks you through this interactively if you'd rather not edit YAML
+# by hand.
+#
+# India-first: tested with CGPA/percentage GPA formats, INR figures,
+# Indian companies + universities. The structure works globally.
+#
+# Once edited, save as `master.yaml` (drop the `.example`) in the
+# project root. The web UI auto-detects it.
+
+schema_version: 1
+
+basics:
+  name: "Priya Sharma"
+  email: "priya.sharma@example.com"
+  phone: "+91 98XXX 12345"
+  location: "Bengaluru, India"
+  links:
+    - {label: "LinkedIn", url: "https://linkedin.com/in/priya-sharma-example"}
+    - {label: "GitHub", url: "https://github.com/priya-example"}
+
+summary: |
+  Backend engineer with 5 years building distributed systems at India-first
+  fintechs. Comfortable across the stack but happiest deep in the runtime.
+
+experience:
+  - id: exp-fintech-co
+    company: "FintechCo"
+    role: "Senior Backend Engineer"
+    start: "2023-04"
+    end: "present"
+    location: "Bengaluru"
+    bullets:
+      - id: exp-fintech-co-1
+        text: "Led migration of payments service from Python/Django to Go, cutting p99 latency from 380ms to 110ms across 8M daily transactions."
+        tags: [backend, go, payments, performance]
+        impact_score: 5
+      - id: exp-fintech-co-2
+        text: "Designed Postgres sharding strategy for the ledger table, enabling per-tenant data residency required for RBI compliance."
+        tags: [postgres, sharding, compliance]
+        impact_score: 4
+      - id: exp-fintech-co-3
+        text: "Mentored 3 junior engineers through structured 1:1s and pair-programming; two were promoted within 12 months."
+        tags: [leadership, mentoring]
+        impact_score: 3
+
+  - id: exp-edtech-startup
+    company: "EdtechStartup"
+    role: "Software Engineer"
+    start: "2021-06"
+    end: "2023-03"
+    location: "Pune"
+    bullets:
+      - id: exp-edtech-startup-1
+        text: "Built the live-class video pipeline (WebRTC + Janus) that scaled from 200 to 50K concurrent students across 6 months."
+        tags: [webrtc, scaling, video]
+        impact_score: 5
+      - id: exp-edtech-startup-2
+        text: "Owned migration from MongoDB to PostgreSQL for the learner-progress service, reducing query latency by 4x."
+        tags: [databases, migration, performance]
+        impact_score: 4
+
+projects:
+  - id: proj-bharat-cli
+    name: "bharat-cli"
+    url: "https://github.com/priya-example/bharat-cli"
+    bullets:
+      - id: proj-bharat-cli-1
+        text: "Open-source CLI for UPI testing — generates valid VPA fixtures and replays transaction flows. 240 GitHub stars."
+        tags: [oss, upi, testing]
+
+education:
+  - id: edu-iitm
+    school: "IIT Madras"
+    degree: "B.Tech, Computer Science"
+    year: "2021"
+    location: "Chennai"
+    status: "graduated"
+    gpa: "CGPA 8.7/10"
+
+skills:
+  - {category: "Languages", items: ["Go", "Python", "TypeScript", "SQL"]}
+  - {category: "Infra", items: ["Kubernetes", "Postgres", "Redis", "Kafka", "AWS"]}
+  - {category: "Practices", items: ["Distributed systems", "Performance tuning", "On-call discipline"]}
+
+awards:
+  - name: "Hackathon winner — Smart India Hackathon 2020"
+    criteria: "Top team of 6,000+ across India, awarded by MHRD"
+    year: "2020"

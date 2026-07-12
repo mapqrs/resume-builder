@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Build my master · Resume Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='wizard.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Build my master</h1>
+    <p class="subtitle">
+      Guided reflection &rarr; a clean <code>master.yaml</code> you can tailor to any job.
+      Local only. Nothing leaves your machine until you click Generate.
+      <a href="{{ url_for('index') }}">&larr; back to tailor</a>
+    </p>
+    <div id="status" class="status" aria-live="polite" hidden></div>
+  </header>
+
+  <main>
+    {% if provider_status %}
+    <div class="ai-status {{ provider_status.level }}" role="status">
+      <span class="ai-dot" aria-hidden="true"></span>
+      <span><strong>{{ provider_status.label }}.</strong> {{ provider_status.detail }}</span>
+    </div>
+    {% endif %}
+
+    <div class="sample-cta">
+      <div class="sample-cta-text">
+        <strong>Just want to see how it works?</strong>
+        <span>Skip the typing — load a ready-made sample resume and jump straight to tailoring.</span>
+      </div>
+      <button type="button" id="btn-load-sample" class="btn-sample">Load sample data →</button>
+    </div>
+
+    <!-- Step 1: role family -->
+    <fieldset>
+      <legend>1. What kind of work do you do?</legend>
+      <p class="hint">
+        Pick the closest match. We use this to ask the right reflection questions
+        and shape the resume conventions for your field. Emerging or hybrid role?
+        Pick <em>Other</em> and describe it in your own words.
+      </p>
+
+      <div class="role-grid" id="role-grid">
+        {% for rf in role_families %}
+        <label class="role-card">
+          <input type="radio" name="role_family" value="{{ rf.id }}">
+          <span class="role-label">{{ rf.label }}</span>
+          <span class="role-blurb">{{ rf.blurb }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <div id="role-other-wrap" hidden>
+        <label>Describe your role in your own words
+          <input type="text" id="role_family_other"
+                 placeholder="e.g. AI safety researcher, growth + community lead, …">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Step 2: career start + chunks -->
+    <fieldset id="chunks-section" disabled>
+      <legend>2. Your career, sliced into reflection-friendly chunks</legend>
+      <p class="hint">
+        Pick a brain-dump cadence below — how finely we slice your career
+        for the reflection step. We'll pre-select what makes sense for
+        your tenure, but you can override.
+      </p>
+
+      <div class="row">
+        <label>Career start
+          <input type="month" id="career_start">
+        </label>
+        <label>Brain-dump cadence
+          <select id="cadence-select"></select>
+        </label>
+        <button type="button" id="btn-regenerate">Regenerate chunks</button>
+      </div>
+
+      <p class="hint" id="cadence-guidance"></p>
+      <p class="hint inline" id="chunks-summary"></p>
+
+      <div id="chunks-list" class="chunks-list"></div>
+    </fieldset>
+
+    <!-- Step 3: per-chunk brain dump -->
+    <fieldset id="dump-section" disabled>
+      <legend>3. Dump everything you remember, one chunk at a time</legend>
+      <p class="hint">
+        Don't worry about phrasing, structure, or what's "resume-worthy" yet.
+        Get it out of your head. The prompts on the right are memory triggers,
+        not a checklist &mdash; skip anything that doesn't apply.
+      </p>
+
+      <div class="dump-layout">
+        <aside class="prompts-pane">
+          <h3>Memory triggers</h3>
+          <ul id="prompts-list"></ul>
+          <p class="hint">
+            These adapt to your role family. Read them; answer whichever
+            spark something.
+          </p>
+        </aside>
+
+        <div class="dump-pane">
+          <div class="row chunk-nav">
+            <button type="button" id="btn-prev-chunk">&larr; previous</button>
+            <span id="chunk-title" class="chunk-title">Pick a chunk above</span>
+            <button type="button" id="btn-next-chunk">next &rarr;</button>
+          </div>
+          <div class="dump-toolbar">
+            <button type="button" id="btn-voice" class="mic-btn"
+                    aria-label="Start dictation"
+                    title="Click to dictate (&#8679;&#8984;M)."
+                    hidden>
+              <span class="mic-icon" aria-hidden="true">&#127908;</span>
+              <span class="mic-label">Dictate</span>
+            </button>
+            <span class="hint inline mic-shortcut">Shortcut: &#8679;&#8984;M (Shift+Ctrl+M on Windows/Linux)</span>
+          </div>
+          <div id="voice-live" class="sr-only" aria-live="polite"></div>
+          <textarea id="raw-notes" rows="20" spellcheck="true"
+            placeholder="Type freely. Bullet points, sentences, fragments &mdash; whatever helps you remember."></textarea>
+          <p class="hint inline" id="chunk-meta"></p>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="file-button">
+          Or import an old resume / paste LinkedIn&hellip;
+          <input type="file" id="import_file"
+                 accept=".pdf,.docx,.md,.markdown,.txt,.text" hidden>
+        </label>
+        <span class="hint inline">
+          PDF / DOCX / MD / TXT extracted into the current chunk's notes.
+          You can also paste your LinkedIn profile text directly.
+        </span>
+      </div>
+    </fieldset>
+
+    <!-- Step 4: extract accomplishments -->
+    <fieldset id="extract-section" disabled>
+      <legend>4. Extract accomplishments from this chunk</legend>
+      <p class="hint">
+        The AI reads only the notes for the currently-open chunk and turns them
+        into Bock-format bullets. It is forbidden from inventing numbers or
+        proper nouns; missing pieces appear as <code>[NUMBER]</code>,
+        <code>[METHOD]</code>, <code>[TIMEFRAME]</code>, or <code>[SCOPE]</code>
+        placeholders you'll fill in later.
+      </p>
+
+      <div class="row">
+        <button type="button" id="btn-extract" disabled>Extract accomplishments</button>
+        <span class="hint inline" id="extract-meta">Open a chunk and type at least 80 characters of notes.</span>
+      </div>
+
+      <div id="drafts-empty" class="drafts-empty hint">
+        No drafts yet for this chunk.
+      </div>
+
+      <div id="drafts-list" class="drafts-list" hidden></div>
+
+      <details id="llm-call-details" hidden>
+        <summary>Show LLM call (for debugging / trust)</summary>
+        <h4>System prompt</h4>
+        <pre id="llm-call-system" class="llm-pre"></pre>
+        <h4>User message</h4>
+        <pre id="llm-call-user" class="llm-pre"></pre>
+        <h4>Raw response</h4>
+        <pre id="llm-call-raw" class="llm-pre"></pre>
+        <p class="hint" id="llm-call-provider"></p>
+      </details>
+    </fieldset>
+
+    <!-- Step 5: categorize -->
+    <fieldset id="categorize-section" disabled>
+      <legend>5. Categorize across all chunks</legend>
+      <p class="hint">
+        Once you've extracted drafts from your chunks, slot each one into the
+        right section of your resume. The AI proposes a bucket; you can
+        reassign with the dropdown on any card, or merge two related drafts
+        into one. Already-bucketed drafts are left alone when you re-run
+        Auto-categorize.
+      </p>
+
+      <div class="row">
+        <button type="button" id="btn-categorize" disabled>Auto-categorize with AI</button>
+        <span class="hint inline" id="categorize-meta">No drafts to categorize yet. Run Extract on a chunk first.</span>
+      </div>
+
+      <div id="buckets-pane" class="buckets-pane"></div>
+
+      <details id="categorize-llm-details" hidden>
+        <summary>Show categorize LLM call</summary>
+        <h4>System prompt</h4>
+        <pre id="categorize-llm-system" class="llm-pre"></pre>
+        <h4>User message</h4>
+        <pre id="categorize-llm-user" class="llm-pre"></pre>
+        <h4>Raw response</h4>
+        <pre id="categorize-llm-raw" class="llm-pre"></pre>
+        <p class="hint" id="categorize-llm-provider"></p>
+      </details>
+    </fieldset>
+
+    <!-- Step 6: education -->
+    <fieldset id="education-section">
+      <legend>6. Education</legend>
+      <p class="hint">
+        Add each degree, certification, or programme separately. Pick the
+        status that matches reality &mdash; dropout, on-leave, deferred
+        admit, and certifications-only are first-class options. India-aware:
+        CGPA out of 10, percentage, &ldquo;first class&rdquo;, and US-style
+        4-point GPA all work in the GPA field.
+      </p>
+
+      <p class="hint">
+        <strong>Bock's GPA rule:</strong> include only if you're in the top
+        quartile of your cohort &mdash; roughly &ge; 8.5/10 CGPA, &ge; 80%,
+        first class with distinction, or &ge; 3.5/4 GPA. It is fine to
+        slice (&ldquo;3.7 in major&rdquo;) but disclose it. Below the bar?
+        Leave the GPA blank.
+      </p>
+
+      <p class="hint">
+        <strong>Awards need criteria.</strong> &ldquo;Smith Prize&rdquo;
+        alone is noise; &ldquo;Smith Prize, top of cohort of 240&rdquo;
+        signals. Add the criteria for every award you include.
+      </p>
+
+      <p class="hint">
+        <strong>Position-of-strength framing.</strong> Non-standard
+        statuses (dropout, declined admit, on leave, deferred) get an extra
+        textarea to capture <em>why</em> in your own voice. Say no to an
+        elite MBA to scale a startup? Left undergrad early to ship
+        something? That story belongs here &mdash; recruiters read it as
+        decisiveness, not as a gap.
+      </p>
+
+      <div id="education-list" class="education-list"></div>
+
+      <button type="button" id="btn-add-education">+ Add education entry</button>
+    </fieldset>
+
+    <!-- Step 7: your basics -->
+    <fieldset id="basics-section">
+      <legend>7. Your basics</legend>
+      <p class="hint">
+        The header of every resume: your name, contact info, and a few
+        links. Only the name is required &mdash; everything else is optional
+        but recruiters expect at least an email + phone.
+      </p>
+      <div class="basics-grid" id="basics-grid"></div>
+    </fieldset>
+
+    <!-- Step 8: per-chunk employment -->
+    <fieldset id="employment-section">
+      <legend>8. Where you worked</legend>
+      <p class="hint">
+        For each time-chunk that holds work-experience drafts, add the
+        company and role. We'll use this to assemble one <code>Experience</code>
+        entry per chunk in your master resume. Dates default to the chunk's
+        window &mdash; override if the employment actually spanned a
+        different period.
+      </p>
+      <div id="employment-list" class="employment-list">
+        <p class="hint" id="employment-empty" hidden>
+          No experience-bucketed drafts yet &mdash; once you've categorized
+          drafts in Step 5, the chunks they belong to will appear here.
+        </p>
+      </div>
+    </fieldset>
+
+    <!-- Step 9: save master -->
+    <fieldset id="promote-section">
+      <legend>9. Save your master resume</legend>
+      <p class="hint">
+        Assemble everything you've captured (basics, education, drafts,
+        employment) into a single <code>master.yaml</code> file. You'll
+        see a preview first &mdash; edit it freely before clicking Save.
+        Any existing <code>master.yaml</code> in the project folder is
+        backed up automatically.
+      </p>
+
+      <div class="row">
+        <button type="button" id="btn-preview-master">Preview master.yaml</button>
+        <button type="button" id="btn-save-master" disabled>Save to master.yaml</button>
+        <span class="hint inline" id="promote-meta"></span>
+      </div>
+
+      <div id="promote-warnings" class="promote-warnings" hidden></div>
+
+      <textarea id="promote-yaml" rows="22" spellcheck="false"
+        placeholder="Click 'Preview master.yaml' to see the assembled file. You can edit before saving."
+        disabled></textarea>
+
+      <p class="hint inline" id="promote-saved-info" hidden></p>
+    </fieldset>
+
+    <!-- Step 10: LinkedIn profile builder -->
+    <fieldset id="linkedin-section">
+      <legend>10. LinkedIn profile</legend>
+      <p class="hint">
+        Generate a complete LinkedIn profile from everything you've captured.
+        Each section is crafted for LinkedIn's medium (longer-form, first-person
+        in About, keyword-rich) rather than reusing resume bullets verbatim.
+        Same anti-fabrication guard: every claim traces back to a master bullet.
+      </p>
+
+      <p class="hint">
+        Output is copy-paste blocks &mdash; no LinkedIn API integration.
+        Paste each block into LinkedIn's edit screen for that section.
+      </p>
+
+      <div class="row">
+        <button type="button" id="btn-build-linkedin">Generate LinkedIn profile</button>
+        <span class="hint inline" id="linkedin-meta">
+          Save your master first (Step 9). LinkedIn pulls from the saved
+          master if available, or a fresh in-memory promote otherwise.
+        </span>
+      </div>
+
+      <div id="linkedin-warnings" class="promote-warnings" hidden></div>
+
+      <div id="linkedin-output" hidden>
+        <h3>Headline <span class="hint inline" id="linkedin-headline-count"></span></h3>
+        <textarea id="linkedin-headline" rows="2" spellcheck="true"></textarea>
+
+        <h3>About <span class="hint inline" id="linkedin-about-count"></span></h3>
+        <textarea id="linkedin-about" rows="14" spellcheck="true"></textarea>
+
+        <h3>Experience</h3>
+        <div id="linkedin-experience" class="linkedin-experience"></div>
+
+        <h3>Featured</h3>
+        <div id="linkedin-featured" class="linkedin-featured"></div>
+
+        <h3>Skills</h3>
+        <p class="hint" id="linkedin-skills-pinned"></p>
+        <textarea id="linkedin-skills" rows="6" spellcheck="false"
+          placeholder="One skill per line — paste each into LinkedIn's Skills edit screen."></textarea>
+
+        <h3>Education</h3>
+        <div id="linkedin-education" class="linkedin-education"></div>
+
+        <h3>Full profile (linkedin.md)</h3>
+        <p class="hint">
+          A single file with every block. Download or copy whole sections at once.
+        </p>
+        <textarea id="linkedin-md" rows="14" spellcheck="false"></textarea>
+        <div class="row">
+          <button type="button" id="btn-copy-linkedin-md">Copy linkedin.md</button>
+          <button type="button" id="btn-download-linkedin-md">Download linkedin.md</button>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Next-phase footer -->
+    <div class="next-phase-footer">
+      <p class="hint">
+        Once <code>master.yaml</code> is on disk, the existing tailor in
+        the main page can use it &mdash; head back to <a href="{{ url_for('index') }}">the tailor</a>
+        to generate a JD-specific .docx. JD-less target-role mode (Phase 7)
+        is next on the roadmap.
+      </p>
+    </div>
+  </main>
+
+  <!-- First-use privacy disclosure for voice typing -->
+  <dialog id="voice-privacy-dialog" class="modal">
+    <form method="dialog">
+      <h2>Voice typing</h2>
+      <p>
+        Voice typing uses your browser's built-in speech engine. In Chrome that
+        means audio is sent to <strong>Google's speech servers</strong>; in Safari,
+        to <strong>Apple</strong>. This tool doesn't store or transmit anything
+        itself. Press <em>OK, got it</em> to continue, or close to stick with the
+        keyboard.
+      </p>
+      <p class="hint">
+        A fully on-device option using <code>Whisper-WASM</code> is on the roadmap.
+      </p>
+      <menu class="row">
+        <button type="submit" value="ok" class="primary" id="voice-privacy-ok">OK, got it</button>
+        <button type="submit" value="cancel">Not now</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='voice_input.js') }}"></script>
+  <script src="{{ url_for('static', filename='wizard.js') }}"></script>
+
+  <!-- Phase 9 — persistent privacy footer -->
+  <footer class="privacy-footer">
+    <span class="privacy-line">
+      <span class="dot-green" aria-hidden="true"></span>
+      Your data stays on this machine. Prompts are sent to Anthropic only when you click Generate.
+    </span>
+    <button type="button" id="btn-delete-my-data" class="link-button"
+            title="Wipe sessions/, master.yaml.bak.*, and drafts/. Your current master.yaml stays.">
+      Delete my data
+    </button>
+  </footer>
+
+  <script>
+    // Phase 9: delete-my-data handler on the wizard page (same as index).
+    document.getElementById('btn-delete-my-data')?.addEventListener('click', async () => {
+      const proceed = confirm(
+        "This permanently wipes:\n" +
+        "  • sessions/ (every wizard session — including this one)\n" +
+        "  • master.yaml.bak.* (every backup of master.yaml)\n" +
+        "  • drafts/ (if it exists)\n\n" +
+        "Your current master.yaml is NOT touched. Continue?"
+      );
+      if (!proceed) return;
+      try {
+        const res = await fetch('/api/delete-my-data', { method: 'POST' });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(body.error || `Delete failed (HTTP ${res.status})`);
+          return;
+        }
+        const n = (body.removed_paths || []).length;
+        alert(`Deleted ${n} item${n === 1 ? '' : 's'}. Reload the page to start fresh.`);
+      } catch (err) {
+        alert('Delete failed: ' + err.message);
+      }
+    });
+  </script>
+  <script>
+    // "Load sample data" — copy the bundled example master, then open the tailor.
+    (function () {
+      const btn = document.getElementById('btn-load-sample');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Loading sample…';
+        try {
+          const res = await fetch('/api/load-sample', { method: 'POST' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          window.location.href = '{{ url_for("index") }}';
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = original;
+          alert('Could not load the sample resume. Is samples/master.example.yaml present?');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

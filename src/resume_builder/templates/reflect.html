@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>The Four Levers of Your Edge · Resume Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">R</span>
+    <span class="title">Resume Builder</span>
+    <span class="slash">/</span>
+    <span class="sub">four levers of your edge</span>
+  </div>
+  <span class="pill"><span class="dot"></span>local · 127.0.0.1</span>
+  <div class="spacer"></div>
+  <a class="wizard-link" href="{{ url_for('about') }}">About</a>
+  <a class="wizard-link" href="{{ url_for('index') }}?skip-wizard=1">Tailor &rarr;</a>
+</header>
+
+<main class="reflect-page">
+
+  <section class="reflect-intro">
+    <h1>The Four Levers of Your Edge</h1>
+    <p>
+      This worksheet helps you see your career edge clearly &mdash; and name
+      it specifically. Each section has reflection prompts, a sentence to
+      complete, and examples grounded in real product, growth, and
+      marketing work.
+    </p>
+    <p class="hint">
+      Answers save automatically in your browser. Nothing leaves this
+      page until you click <strong>Synthesize my edge</strong> &mdash; at
+      which point the LLM patterns your own words (it doesn't invent new
+      ones) into a 1-page summary you can carry into your next job
+      conversation.
+    </p>
+  </section>
+
+  <!-- ===== Lever 1: Judgment ===== -->
+  <section class="reflect-card" data-lever="1">
+    <header>
+      <span class="num">1</span>
+      <h2>Judgment <span class="lever-sub">&mdash; How you decide what matters</span></h2>
+    </header>
+    <p class="lever-blurb">
+      Judgment is about what you choose to focus on &mdash; and what you
+      cut early. This is where your thinking shows up, especially when
+      things are noisy or unclear.
+    </p>
+
+    <h3 class="prompt-group">Reflection Prompts</h3>
+    <div class="reflect-prompt">
+      <label>When did I say no &mdash; and I was right?
+        <textarea data-key="l1-p1" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>Where do I cut through noise faster than others?
+        <textarea data-key="l1-p2" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What trade-offs do people trust me to call?
+        <textarea data-key="l1-p3" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What messes have I helped avoid &mdash; that others didn't even see coming?
+        <textarea data-key="l1-p4" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What decisions do I quietly shape &mdash; even if I'm not the one announcing them?
+        <textarea data-key="l1-p5" rows="2"></textarea>
+      </label>
+    </div>
+
+    <h3 class="prompt-group">Sentence to Complete</h3>
+    <div class="sentence-row">
+      <span>I bring judgment when</span>
+      <input type="text" data-key="l1-s1" placeholder="…">
+      <span>, and it helps people avoid</span>
+      <input type="text" data-key="l1-s2" placeholder="…">
+      <span>.</span>
+    </div>
+
+    <details class="examples-accordion">
+      <summary>Examples (Product / Growth / Marketing)</summary>
+      <ul>
+        <li><strong>Product:</strong> I bring judgment when we're debating which features to build, and it helps the team focus on the 1&ndash;2 bets that actually solve the user's core problem.</li>
+        <li><strong>Growth:</strong> I bring judgment when we're chasing multiple levers for acquisition, and it helps the team zero in on the one lever that's compounding.</li>
+        <li><strong>Marketing:</strong> I bring judgment when there's pressure to launch across channels, and it helps us pick the 1&ndash;2 that actually convert &mdash; instead of spreading too thin.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===== Lever 2: Pressure ===== -->
+  <section class="reflect-card" data-lever="2">
+    <header>
+      <span class="num">2</span>
+      <h2>Pressure <span class="lever-sub">&mdash; How you show up when things break</span></h2>
+    </header>
+    <p class="lever-blurb">
+      This is about how you respond when the plan falls apart, timelines
+      shift, or leadership is unclear.
+    </p>
+
+    <h3 class="prompt-group">Reflection Prompts</h3>
+    <div class="reflect-prompt">
+      <label>When did I help move something forward when everyone else was reacting?
+        <textarea data-key="l2-p1" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What do I usually step into when things get messy?
+        <textarea data-key="l2-p2" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What kind of chaos do I handle better than most?
+        <textarea data-key="l2-p3" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>Who pulls me in when they're stuck?
+        <textarea data-key="l2-p4" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What do I keep moving &mdash; even when things feel blocked?
+        <textarea data-key="l2-p5" rows="2"></textarea>
+      </label>
+    </div>
+
+    <h3 class="prompt-group">Sentence to Complete</h3>
+    <div class="sentence-row">
+      <span>When things get messy, I step in to</span>
+      <input type="text" data-key="l2-s1" placeholder="…">
+      <span>, because I stay steady when</span>
+      <input type="text" data-key="l2-s2" placeholder="…">
+      <span>.</span>
+    </div>
+
+    <details class="examples-accordion">
+      <summary>Examples (Product / Growth / Marketing)</summary>
+      <ul>
+        <li><strong>Product:</strong> I step in to reset priorities after leadership changes direction, because I stay steady when everyone else is reacting.</li>
+        <li><strong>Growth:</strong> I hold the line on experiments, because I stay steady when tests don't immediately show results and panic sets in.</li>
+        <li><strong>Marketing:</strong> I calm launch chaos, because I stay steady when timelines are tight and multiple stakeholders are involved.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===== Lever 3: Trust ===== -->
+  <section class="reflect-card" data-lever="3">
+    <header>
+      <span class="num">3</span>
+      <h2>Trust <span class="lever-sub">&mdash; What people rely on you for</span></h2>
+    </header>
+    <p class="lever-blurb">
+      This is the unspoken role you play &mdash; the weight you carry that
+      makes everything around you work better, even if no one names it.
+    </p>
+
+    <h3 class="prompt-group">Reflection Prompts</h3>
+    <div class="reflect-prompt">
+      <label>What do people always expect me to handle &mdash; even if it's unspoken?
+        <textarea data-key="l3-p1" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What would quietly fall apart if I stopped doing something I always do?
+        <textarea data-key="l3-p2" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What type of work or conversations do people trust me with?
+        <textarea data-key="l3-p3" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What do I carry that others would struggle to name &mdash; but know they need?
+        <textarea data-key="l3-p4" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What feedback or phrase about how I work has stuck with me?
+        <textarea data-key="l3-p5" rows="2"></textarea>
+      </label>
+    </div>
+
+    <h3 class="prompt-group">Sentence to Complete</h3>
+    <div class="sentence-row">
+      <span>Even when no one says it, people rely on me to</span>
+      <input type="text" data-key="l3-s1" placeholder="…">
+      <span>, and I carry that with</span>
+      <input type="text" data-key="l3-s2" placeholder="…">
+      <span>.</span>
+    </div>
+
+    <details class="examples-accordion">
+      <summary>Examples (Product / Growth / Marketing)</summary>
+      <ul>
+        <li><strong>Product:</strong> People rely on me to bring clarity to product handoffs, and I carry that with consistency and zero drama.</li>
+        <li><strong>Growth:</strong> People rely on me to spot weak experiments early, and I carry that with accountability to revenue impact.</li>
+        <li><strong>Marketing:</strong> People rely on me to connect campaigns back to real outcomes, and I carry that with an honest take on what's fluff and what's not.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===== Lever 4: Signal + Skills ===== -->
+  <section class="reflect-card" data-lever="4">
+    <header>
+      <span class="num">4</span>
+      <h2>Signal &amp; Skills <span class="lever-sub">&mdash; Whether others can see your edge</span></h2>
+    </header>
+    <p class="lever-blurb">
+      Being good isn't enough. Your value has to be visible &mdash; and your
+      skillset clear. This section helps you see where your edge is being
+      under-shown.
+    </p>
+
+    <h3 class="prompt-group">Skill Articulation Prompts</h3>
+    <div class="reflect-prompt">
+      <label>What hard skills do I use often, but don't talk about enough?
+        <textarea data-key="l4-p1" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What soft skills am I showing daily, but rarely name?
+        <textarea data-key="l4-p2" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What business context do I bring that others overlook &mdash; revenue, ops, customer thinking?
+        <textarea data-key="l4-p3" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What industry patterns or user behaviors do I understand well &mdash; but take for granted?
+        <textarea data-key="l4-p4" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>If someone had to pitch what I bring &mdash; would they get it right?
+        <textarea data-key="l4-p5" rows="2"></textarea>
+      </label>
+    </div>
+
+    <h3 class="prompt-group">Signal Prompts</h3>
+    <div class="reflect-prompt">
+      <label>Where is my edge clear only to people who work directly with me?
+        <textarea data-key="l4-p6" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What have I done that says a lot &mdash; but I've never shared?
+        <textarea data-key="l4-p7" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>If I left today, what part of my value wouldn't carry over because it's invisible?
+        <textarea data-key="l4-p8" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="reflect-prompt">
+      <label>What version of me are people still seeing &mdash; that I've already outgrown?
+        <textarea data-key="l4-p9" rows="2"></textarea>
+      </label>
+    </div>
+
+    <h3 class="prompt-group">Sentence to Complete</h3>
+    <div class="sentence-row">
+      <span>My edge is</span>
+      <input type="text" data-key="l4-s1" placeholder="…">
+      <span>, but I've been underselling it by</span>
+      <input type="text" data-key="l4-s2" placeholder="…">
+      <span>.</span>
+    </div>
+
+    <details class="examples-accordion">
+      <summary>Examples (Product / Growth / Marketing)</summary>
+      <ul>
+        <li><strong>Product:</strong> My edge is connecting product decisions to customer pain in real time, but I've been underselling it by only talking about feature launches.</li>
+        <li><strong>Growth:</strong> My edge is spotting under-leveraged growth loops, but I've been underselling it by only sharing surface-level growth wins.</li>
+        <li><strong>Marketing:</strong> My edge is distilling complex messaging into what users actually care about, but I've been underselling it by hiding behind performance metrics.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- ===== Synthesis ===== -->
+  <section class="reflect-card synth-card">
+    <header>
+      <span class="num">&#10022;</span>
+      <h2>Synthesize my edge</h2>
+    </header>
+    <p class="lever-blurb">
+      Patterns your own words across the four levers into a 1-page summary
+      &mdash; your edge in one sentence, 3&ndash;5 concrete next-step
+      actions, and what to add to your master / LinkedIn that you're
+      currently under-showing. The LLM only patterns what you wrote; it
+      doesn't invent companies, roles, or claims you didn't name.
+    </p>
+    <div class="row" style="gap: 10px; margin-top: 10px;">
+      <button type="button" class="btn primary" id="btn-synthesize">Synthesize my edge</button>
+      <button type="button" class="btn" id="btn-export-md">Download answers (.md)</button>
+      <button type="button" class="btn ghost" id="btn-clear-reflect">Clear all</button>
+      <span class="hint inline" id="reflect-status"></span>
+    </div>
+    <div id="reflect-insights" class="reflect-insights" hidden></div>
+  </section>
+
+</main>
+
+<footer class="privacy-footer">
+  <span class="privacy-line">
+    <span class="dot-green" aria-hidden="true"></span>
+    Answers save to your browser. The synthesize call sends them to Anthropic only when you click the button.
+  </span>
+  <a class="wizard-link" href="{{ url_for('index') }}?skip-wizard=1">Tailor &rarr;</a>
+</footer>
+
+<script>
+  // ---------- Four Levers state + persistence ----------
+
+  const LS_KEY = 'rb.reflect.fourLevers.v1';
+
+  function $(sel) { return document.querySelector(sel); }
+  function $$(sel) { return Array.from(document.querySelectorAll(sel)); }
+
+  function reflectInputs() {
+    return $$('[data-key]');
+  }
+
+  function readState() {
+    const out = {};
+    reflectInputs().forEach((el) => { out[el.dataset.key] = el.value || ''; });
+    return out;
+  }
+
+  function writeState(obj) {
+    if (!obj || typeof obj !== 'object') return;
+    reflectInputs().forEach((el) => {
+      if (obj[el.dataset.key] !== undefined) el.value = obj[el.dataset.key];
+    });
+  }
+
+  function save() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(readState())); } catch (_) {}
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) writeState(JSON.parse(raw));
+    } catch (_) { /* ignore corrupt state */ }
+  }
+
+  function setStatus(text, level) {
+    const el = $('#reflect-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color =
+      level === 'error' ? 'var(--accent-red, #b3261e)'
+      : level === 'ok' ? 'var(--accent-green, #1f7a3a)'
+      : '';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  // ---------- Synthesize ----------
+
+  async function synthesize() {
+    const state = readState();
+    const filledKeys = Object.keys(state).filter((k) => (state[k] || '').trim());
+    if (filledKeys.length < 4) {
+      setStatus('Fill in at least a few answers first — synthesis needs material to pattern.', 'error');
+      return;
+    }
+    setStatus('Patterning your answers… (~10-30s)', '');
+    $('#btn-synthesize').disabled = true;
+    try {
+      const res = await fetch('/api/reflect/synthesize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answers: state }),
+      });
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const j = await res.json();
+          detail = j.hint || j.detail || j.error || detail;
+        } catch (_) {}
+        setStatus(`Synthesis failed: ${detail}`, 'error');
+        return;
+      }
+      const data = await res.json();
+      renderInsights(data);
+      setStatus(`Done · via ${data.provider?.name || 'LLM'}`, 'ok');
+    } catch (err) {
+      setStatus(`Synthesis failed: ${err.message}`, 'error');
+    } finally {
+      $('#btn-synthesize').disabled = false;
+    }
+  }
+
+  function renderInsights(data) {
+    const box = $('#reflect-insights');
+    if (!box) return;
+    box.hidden = false;
+    const safe = (s) => escapeHtml(s || '');
+    const nextSteps = (data.next_steps || []).map((s) => `<li>${safe(s)}</li>`).join('');
+    const masterAdds = (data.master_additions || []).map((s) => `<li>${safe(s)}</li>`).join('');
+    const linkedinAdds = (data.linkedin_additions || []).map((s) => `<li>${safe(s)}</li>`).join('');
+    box.innerHTML = `
+      <h3>Your edge, in one paragraph</h3>
+      <p class="edge-summary">${safe(data.edge_summary)}</p>
+
+      ${nextSteps ? `<h3>Concrete next steps</h3><ol>${nextSteps}</ol>` : ''}
+
+      ${masterAdds ? `<h3>Add to your master.yaml</h3><ul>${masterAdds}</ul>` : ''}
+
+      ${linkedinAdds ? `<h3>Surface on LinkedIn</h3><ul>${linkedinAdds}</ul>` : ''}
+
+      ${data.rationale ? `<details class="examples-accordion"><summary>Why this pattern</summary><p>${safe(data.rationale)}</p></details>` : ''}
+    `;
+  }
+
+  // ---------- Export to .md ----------
+
+  function exportMarkdown() {
+    const state = readState();
+    const lines = [
+      '# The Four Levers of Your Edge',
+      '',
+      '_Self-reflection worksheet — answers exported locally._',
+      '',
+    ];
+
+    const LEVERS = [
+      {
+        n: 1, title: 'Judgment — How you decide what matters',
+        prompts: [
+          ['l1-p1', 'When did I say no — and I was right?'],
+          ['l1-p2', 'Where do I cut through noise faster than others?'],
+          ['l1-p3', 'What trade-offs do people trust me to call?'],
+          ['l1-p4', "What messes have I helped avoid — that others didn't even see coming?"],
+          ['l1-p5', "What decisions do I quietly shape — even if I'm not the one announcing them?"],
+        ],
+        sentenceTemplate: ['I bring judgment when', ', and it helps people avoid', '.'],
+        sentenceKeys: ['l1-s1', 'l1-s2'],
+      },
+      {
+        n: 2, title: 'Pressure — How you show up when things break',
+        prompts: [
+          ['l2-p1', 'When did I help move something forward when everyone else was reacting?'],
+          ['l2-p2', 'What do I usually step into when things get messy?'],
+          ['l2-p3', 'What kind of chaos do I handle better than most?'],
+          ['l2-p4', "Who pulls me in when they're stuck?"],
+          ['l2-p5', 'What do I keep moving — even when things feel blocked?'],
+        ],
+        sentenceTemplate: ['When things get messy, I step in to', ', because I stay steady when', '.'],
+        sentenceKeys: ['l2-s1', 'l2-s2'],
+      },
+      {
+        n: 3, title: 'Trust — What people rely on you for',
+        prompts: [
+          ['l3-p1', "What do people always expect me to handle — even if it's unspoken?"],
+          ['l3-p2', 'What would quietly fall apart if I stopped doing something I always do?'],
+          ['l3-p3', 'What type of work or conversations do people trust me with?'],
+          ['l3-p4', 'What do I carry that others would struggle to name — but know they need?'],
+          ['l3-p5', 'What feedback or phrase about how I work has stuck with me?'],
+        ],
+        sentenceTemplate: ['Even when no one says it, people rely on me to', ', and I carry that with', '.'],
+        sentenceKeys: ['l3-s1', 'l3-s2'],
+      },
+      {
+        n: 4, title: 'Signal & Skills — Whether others can see your edge',
+        prompts: [
+          ['l4-p1', "What hard skills do I use often, but don't talk about enough?"],
+          ['l4-p2', 'What soft skills am I showing daily, but rarely name?'],
+          ['l4-p3', 'What business context do I bring that others overlook — revenue, ops, customer thinking?'],
+          ['l4-p4', 'What industry patterns or user behaviors do I understand well — but take for granted?'],
+          ['l4-p5', 'If someone had to pitch what I bring — would they get it right?'],
+          ['l4-p6', 'Where is my edge clear only to people who work directly with me?'],
+          ['l4-p7', "What have I done that says a lot — but I've never shared?"],
+          ['l4-p8', "If I left today, what part of my value wouldn't carry over because it's invisible?"],
+          ['l4-p9', "What version of me are people still seeing — that I've already outgrown?"],
+        ],
+        sentenceTemplate: ['My edge is', ", but I've been underselling it by", '.'],
+        sentenceKeys: ['l4-s1', 'l4-s2'],
+      },
+    ];
+
+    LEVERS.forEach((lev) => {
+      lines.push(`## ${lev.n}. ${lev.title}`);
+      lines.push('');
+      lev.prompts.forEach(([key, q]) => {
+        const a = (state[key] || '').trim();
+        lines.push(`**${q}**`);
+        lines.push('');
+        lines.push(a ? a : '_(blank)_');
+        lines.push('');
+      });
+      const [pre, mid, post] = lev.sentenceTemplate;
+      const a = (state[lev.sentenceKeys[0]] || '____').trim() || '____';
+      const b = (state[lev.sentenceKeys[1]] || '____').trim() || '____';
+      lines.push(`**Sentence:** ${pre} **${a}**${mid} **${b}**${post}`);
+      lines.push('');
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'four-levers-of-your-edge.md';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    setStatus('Downloaded four-levers-of-your-edge.md', 'ok');
+  }
+
+  function clearAll() {
+    if (!confirm('Clear every answer? This wipes the localStorage copy too.')) return;
+    reflectInputs().forEach((el) => { el.value = ''; });
+    try { localStorage.removeItem(LS_KEY); } catch (_) {}
+    $('#reflect-insights').hidden = true;
+    setStatus('Cleared.', 'ok');
+  }
+
+  // ---------- Wire ----------
+
+  load();
+  reflectInputs().forEach((el) => el.addEventListener('input', save));
+  $('#btn-synthesize')?.addEventListener('click', synthesize);
+  $('#btn-export-md')?.addEventListener('click', exportMarkdown);
+  $('#btn-clear-reflect')?.addEventListener('click', clearAll);
+</script>
+
+</body>
+</html>

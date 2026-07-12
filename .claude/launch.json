@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Resume Builder Web UI",
+      "runtimeExecutable": "./run-web.sh",
+      "runtimeArgs": [],
+      "env": { "RESUME_BUILDER_NO_BROWSER": "1" },
+      "port": 5005
+    }
+  ]
+}

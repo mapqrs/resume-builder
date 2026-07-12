@@ -1,0 +1,86 @@
+basics:
+  name: "Jane Doe"
+  email: "jane@example.com"
+  phone: "+1 555-0100"
+  location: "Brooklyn, NY"
+  links:
+    - {label: "LinkedIn", url: "https://linkedin.com/in/janedoe"}
+    - {label: "GitHub", url: "https://github.com/janedoe"}
+
+summary: |
+  Backend engineer with 7 years of experience building distributed systems
+  and developer tools. Comfortable across the stack but happiest deep in
+  the runtime.
+
+experience:
+  - id: exp-acme
+    company: "Acme Logistics"
+    role: "Senior Software Engineer"
+    start: "2022-03"
+    end: "present"
+    location: "Remote"
+    bullets:
+      - id: exp-acme-1
+        text: "Led the rewrite of the dispatch service from Ruby to Go, cutting p99 latency from 480ms to 95ms across 12M daily requests."
+        tags: [backend, go, performance, leadership]
+      - id: exp-acme-2
+        text: "Designed Postgres partitioning strategy for the events table, enabling retention policies that saved $40K/year in storage."
+        tags: [postgres, infra, cost]
+      - id: exp-acme-3
+        text: "Mentored 4 junior engineers through structured pairing and weekly 1:1s; two were promoted within 18 months."
+        tags: [leadership, mentoring]
+      - id: exp-acme-4
+        text: "Built an internal Kubernetes operator that reduced deploy times from 18 minutes to 4 minutes."
+        tags: [kubernetes, devex, infra]
+
+  - id: exp-bolt
+    company: "Bolt Analytics"
+    role: "Software Engineer"
+    start: "2019-06"
+    end: "2022-02"
+    location: "New York, NY"
+    bullets:
+      - id: exp-bolt-1
+        text: "Built the streaming ingest pipeline (Kafka + Flink) that processes 2B events/day for the analytics platform."
+        tags: [kafka, flink, streaming, scaling]
+      - id: exp-bolt-2
+        text: "Owned the migration from self-hosted Cassandra to managed ScyllaDB, eliminating 12 weekly oncall pages."
+        tags: [databases, migration, oncall]
+      - id: exp-bolt-3
+        text: "Wrote the company's first observability runbook; adopted across 6 teams."
+        tags: [observability, docs]
+
+  - id: exp-coda
+    company: "Coda Tools"
+    role: "Junior Software Engineer"
+    start: "2017-08"
+    end: "2019-05"
+    location: "Boston, MA"
+    bullets:
+      - id: exp-coda-1
+        text: "Shipped the first version of the customer-facing audit log feature, used by 300 enterprise customers at launch."
+        tags: [product, backend]
+      - id: exp-coda-2
+        text: "Reduced CI build time from 22 minutes to 7 minutes by parallelizing test suites and caching dependencies."
+        tags: [devex, ci, performance]
+
+projects:
+  - id: proj-pgwatch
+    name: "pgwatch-lite"
+    url: "https://github.com/janedoe/pgwatch-lite"
+    bullets:
+      - id: proj-pgwatch-1
+        text: "Open-source Postgres health dashboard. 1.2k GitHub stars, used in production at 8 companies."
+        tags: [oss, postgres, observability]
+
+education:
+  - id: edu-1
+    school: "University of Michigan"
+    degree: "B.S. Computer Science"
+    year: "2017"
+    location: "Ann Arbor, MI"
+
+skills:
+  - {category: "Languages", items: ["Go", "Python", "TypeScript", "SQL"]}
+  - {category: "Infra", items: ["Kubernetes", "Postgres", "Kafka", "AWS", "Terraform"]}
+  - {category: "Practices", items: ["Distributed systems", "Observability", "Performance tuning"]}

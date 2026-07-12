@@ -1,0 +1,23 @@
+page:
+  size: letter
+  margin_top: 0.5in
+  margin_bottom: 0.5in
+  margin_left: 0.7in
+  margin_right: 0.7in
+
+fonts:
+  body:    {name: "Calibri", size: 10.5}
+  heading: {name: "Calibri", size: 12, bold: true}
+  name:    {name: "Calibri", size: 18, bold: true}
+  role:    {name: "Calibri", size: 11, bold: true}
+
+spacing:
+  line: 1.15
+  paragraph_after: 4
+
+colors:
+  heading: "#000000"
+  accent:  "#2E5C8A"
+  body:    "#000000"
+
+section_order: [summary, experience, projects, education, skills]

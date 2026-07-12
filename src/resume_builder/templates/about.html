@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>About · Resume Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">R</span>
+    <span class="title">Resume Builder</span>
+    <span class="slash">/</span>
+    <span class="sub">about &amp; guide</span>
+  </div>
+  <span class="pill"><span class="dot"></span>local &middot; 127.0.0.1</span>
+  <div class="spacer"></div>
+  <a class="wizard-link" href="{{ url_for('index') }}?skip-wizard=1">Open tailor &rarr;</a>
+  <a class="wizard-link" href="{{ url_for('wizard.wizard_page') }}">Open wizard &rarr;</a>
+</header>
+
+<main class="about-page">
+
+  <section class="about-section">
+    <h1>What this tool is</h1>
+    <p>
+      It turns a single source-of-truth <strong>master resume</strong> into
+      three polished outputs &mdash; a job-specific tailored <code>.docx</code>
+      (or PDF), a matching cover letter, and a LinkedIn profile &mdash; in
+      under five minutes per application.
+    </p>
+    <p>
+      And it <em>never invents experience, projects, or metrics</em>. A
+      fabrication guard runs on every output and drops anything the source
+      doesn't support.
+    </p>
+  </section>
+
+  <section class="about-section">
+    <h2>Why a resume still matters</h2>
+    <p>
+      Recruiters spend <strong>~6 seconds</strong> on a first-pass review
+      (Bock, <em>Work Rules</em>). Whatever they pull out of those six
+      seconds &mdash; your last role, a number, a brand name &mdash; is
+      the entire shortlist signal. Everything else gets read only if
+      those six seconds land.
+    </p>
+    <p>
+      ATS systems (Workday / Greenhouse / Lever / India's TalentRecruit
+      and Naukri RMS) score your resume against the JD before any human
+      sees it. Keyword overlap and clean structure are mandatory. Visual
+      flair is irrelevant &mdash; the ATS strips it.
+    </p>
+  </section>
+
+  <section class="about-section">
+    <h2>What to check before you submit</h2>
+    <ul class="check-list">
+      <li>
+        <strong>Every claim is true.</strong> If you can't defend a metric
+        in an interview, drop it. This tool's anti-fabrication guard catches
+        invented numbers/tools &mdash; but you should re-read for nuance the
+        guard can't see (e.g., "led" vs "contributed to").
+      </li>
+      <li>
+        <strong>ATS keyword coverage.</strong> The web UI shows a coverage
+        percentage (green &ge;80%, yellow 60-79%, red &lt;60%). Below 60%
+        usually means you're filtered out before a human reads it.
+      </li>
+      <li>
+        <strong>Strong verbs, no clich&eacute;s.</strong> "Led", "shipped",
+        "built", "scaled" beat "responsible for", "worked on", "passionate
+        about". The style-lints panel flags these.
+      </li>
+      <li>
+        <strong>Length matches the role.</strong> One page for 0-10 years;
+        two pages for 8+ with genuine breadth. Don't pad to fill space.
+      </li>
+      <li>
+        <strong>Numbers wherever possible.</strong> Bock's "XYZ" rule:
+        accomplished X as measured by Y by doing Z. Resumes with numbers
+        clear ATS + recruiter filters at 2-3&times; the rate.
+      </li>
+      <li>
+        <strong>Tailored, not generic.</strong> The same master &rarr; 3
+        roles = 3 different tailored resumes. Resist the urge to send one
+        generic version everywhere.
+      </li>
+    </ul>
+  </section>
+
+  <section class="about-section">
+    <h2>What <em>not</em> to obsess over</h2>
+    <ul class="check-list muted">
+      <li>
+        <strong>Visual design.</strong> Photo, color scheme, custom fonts,
+        sidebars, two-column layouts &mdash; ATS systems flatten or
+        misparse all of these. Stick to a clean linear layout.
+      </li>
+      <li>
+        <strong>Address (street).</strong> City + country is enough.
+        Recruiters do not need your full address; some ATS systems flag it
+        as a privacy concern.
+      </li>
+      <li>
+        <strong>Hobbies / interests section.</strong> Bock: "a trophy
+        without context is noise" applies here too. Skip unless it
+        signals something concrete (Open Source maintainer, athletics at
+        national level, etc.).
+      </li>
+      <li>
+        <strong>Photo.</strong> India and US conventions diverge: in
+        India, photos are sometimes expected (especially in legacy
+        sectors). For tech / global roles, leave it off &mdash; many
+        ATSes filter resumes with embedded images.
+      </li>
+      <li>
+        <strong>References available on request.</strong> Implicit.
+        Don't take up a line.
+      </li>
+      <li>
+        <strong>Objective statement.</strong> Replaced by the
+        <em>summary</em> (one line, role-relevant) decades ago.
+      </li>
+    </ul>
+  </section>
+
+  <section class="about-section">
+    <h2>Why this tool specifically</h2>
+    <ul class="check-list">
+      <li>
+        <strong>Anti-fabrication moat.</strong> Most AI resume tools cheerfully
+        invent numbers to "make you sound stronger." Recruiters smell it; if
+        they probe and you can't defend the metric, you're out. Our guard
+        rejects any number or proper noun not in your master's vocabulary.
+      </li>
+      <li>
+        <strong>Bock alignment.</strong> Laszlo Bock ran hiring at Google
+        for a decade and wrote the book (literally) on how recruiters read
+        resumes. Our defaults &mdash; XYZ bullets, page-count caps, "trophy
+        + criteria" awards, salutation lints &mdash; are pulled directly
+        from <em>Work Rules</em>.
+      </li>
+      <li>
+        <strong>Local-only, by default.</strong> Your data lives on your
+        machine. The only network call is to Anthropic when you click
+        Generate, with your own credentials.
+        <a href="{{ url_for('index') }}?skip-wizard=1">Privacy footer</a>
+        on every page reminds you of this.
+      </li>
+      <li>
+        <strong>India-first defaults.</strong> CGPA out of 10, percentage
+        marks, "first class with distinction" all work in the GPA field.
+        Indian role conventions baked into the JD-signal extractor and
+        sample fixtures.
+      </li>
+      <li>
+        <strong>Three outputs from one source.</strong> Master &rarr; resume
+        + cover letter + LinkedIn. You maintain one structured document; the
+        tool keeps the other two in sync.
+      </li>
+    </ul>
+  </section>
+
+  <section class="about-section">
+    <h2>Where this helps</h2>
+    <ul class="check-list">
+      <li>
+        <strong>Job applications.</strong> Pick a JD, click Generate. Done in
+        under a minute when <code>claude</code> CLI is logged in.
+      </li>
+      <li>
+        <strong>LinkedIn profile updates.</strong> Step 10 in the wizard
+        generates Headline / About / Experience / Featured / Skills /
+        Education as copy-paste blocks.
+      </li>
+      <li>
+        <strong>Cover letters.</strong> Bock-aligned 4-paragraph structure
+        with salutation lint + company-specificity lint.
+      </li>
+      <li>
+        <strong>Career retrospection.</strong> The wizard's
+        chunk-by-chunk brain-dump is itself useful, independent of
+        tailoring &mdash; you walk away with a structured memory of every
+        accomplishment you can defend.
+      </li>
+      <li>
+        <strong>Cross-checking your existing resume.</strong> Import an old
+        PDF/DOCX into the wizard; the tool extracts the text and you
+        re-organize from there.
+      </li>
+    </ul>
+  </section>
+
+  <section class="about-section">
+    <h2>How to start</h2>
+    <ol class="numbered">
+      <li>
+        <strong>Run the wizard at
+        <a href="{{ url_for('wizard.wizard_page') }}">/wizard</a></strong> and
+        follow the 10 steps top-to-bottom. About 30 minutes the first time.
+      </li>
+      <li>
+        <strong>Or copy <code>samples/master.example.yaml</code> to
+        <code>master.yaml</code></strong> and edit by hand if you'd rather
+        skip the wizard. The
+        <a href="https://github.com/your-fork/blob/main/samples/master.example.yaml">sample</a>
+        is India-first with CGPA + INR examples.
+      </li>
+      <li>
+        <strong>Open the <a href="{{ url_for('index') }}?skip-wizard=1">tailor</a></strong>,
+        paste your JD (or pick "No JD &mdash; describe target role"), choose
+        a format preset, click Generate.
+      </li>
+      <li>
+        <strong>Re-read.</strong> The ATS coverage / guard warnings / style
+        lints panels surface the things worth fixing.
+      </li>
+    </ol>
+  </section>
+
+  <section class="about-section">
+    <h2>Privacy in one line</h2>
+    <p class="callout">
+      Your data stays on this machine. Prompts go to Anthropic only when you
+      click <strong>Generate</strong> &mdash; with your own
+      <code>claude</code> CLI login or your own <code>ANTHROPIC_API_KEY</code>.
+      Nothing else leaves your laptop. No telemetry, no account system, no
+      "anonymous usage stats."
+    </p>
+    <p>
+      The <strong>Delete my data</strong> link in the footer wipes
+      <code>sessions/</code>, every <code>master.yaml.bak.*</code>, and
+      legacy <code>drafts/</code>. Your current <code>master.yaml</code>
+      is left alone.
+    </p>
+  </section>
+
+</main>
+
+<footer class="privacy-footer">
+  <span class="privacy-line">
+    <span class="dot-green" aria-hidden="true"></span>
+    Your data stays on this machine. Prompts are sent to Anthropic only when you click Generate.
+  </span>
+  <a class="wizard-link" href="{{ url_for('index') }}?skip-wizard=1">Tailor &rarr;</a>
+</footer>
+
+</body>
+</html>

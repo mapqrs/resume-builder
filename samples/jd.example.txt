@@ -1,0 +1,29 @@
+Senior Backend Engineer — Payments Platform
+
+About PayCo
+We're building the next-generation payments rails for India's small businesses.
+Recently launched UPI Lite integration; now scaling to 100M+ monthly transactions.
+
+The role
+You'll own a service end-to-end, from API design through observability and on-call.
+Expect to work closely with risk, compliance, and product teams.
+
+What you'll do
+- Design and ship distributed payment-processing services in Go.
+- Own Postgres performance: query plans, partitioning, replication strategy.
+- Drive incident response, write post-mortems, improve runbooks.
+- Mentor junior engineers and review architecture proposals.
+
+What we're looking for
+- 5+ years of backend engineering, ideally on payments or other money-movement systems.
+- Strong Go and Postgres skills.
+- Distributed systems experience: at-least-once delivery, idempotency, eventual consistency.
+- Excellent written communication — you'll write more docs than code in some weeks.
+- On-call ownership mindset.
+
+Nice to have
+- Familiarity with NPCI/UPI specs or open banking APIs.
+- Open-source contributions in the payments or infra space.
+- Experience scaling a system from 1M to 50M daily requests.
+
+Location: Bengaluru (hybrid) or remote within India.

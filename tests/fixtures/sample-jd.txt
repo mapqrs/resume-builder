@@ -1,0 +1,25 @@
+Staff Software Engineer — Platform Infrastructure
+
+We're looking for a staff-level engineer to lead our platform infrastructure
+team. You'll own the runtime, deployment, and observability layers that the
+rest of engineering builds on.
+
+Responsibilities:
+- Drive technical direction for our Kubernetes platform across 200+ services
+- Lead initiatives to reduce deploy latency and improve developer experience
+- Partner with product engineering teams on capacity planning and database design
+- Mentor engineers across multiple teams; influence senior IC career growth
+
+Requirements:
+- 6+ years of backend experience with at least 2 years on infra or platform work
+- Deep expertise in Kubernetes, Postgres, and distributed systems
+- Strong systems-level performance debugging skills
+- Experience leading large rewrites or migrations
+- Excellent written and verbal communication
+
+Bonus:
+- Open-source contributions
+- Experience with Go
+- Background in observability tooling
+
+We're a 200-person Series C startup based in NYC; remote-friendly.

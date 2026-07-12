@@ -1,0 +1,5 @@
+# Default per-run pointers. Override any of these with CLI flags.
+length: 1page              # 1page | 2page | <int> word count
+seniority: senior          # ic | senior | staff | manager | founding-eng
+must_include: []
+context: startup           # startup | faang | consulting | nonprofit | research

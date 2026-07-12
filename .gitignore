@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Your personal data — never committed
+.env
+master.yaml
+master.yaml.bak.*
+out/
+sessions/
+drafts/
+jds/*
+!jds/.gitkeep
+
+# Local working notes (personal paths / third-party source material)
+Laszlo_Bock_Series.md
+BOCK_ROADMAP.md
+HANDOFF.md
+
+# Tooling / OS
+.claude/settings.local.json
+.gstack/
+.DS_Store
+*.bak

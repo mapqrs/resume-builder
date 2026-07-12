@@ -1,0 +1,1606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Resume Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- Phase 9 — first-load privacy banner (dismissable, sticky via localStorage) -->
+<div id="privacy-banner" class="privacy-banner" role="status" hidden>
+  <span>
+    <strong>Your data stays on this machine.</strong>
+    Prompts are sent to Anthropic only when you click Generate. Nothing else.
+  </span>
+  <button type="button" id="privacy-banner-dismiss" aria-label="Dismiss">Got it</button>
+</div>
+
+<!-- ============================== TOP BAR ============================== -->
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">R</span>
+    <span class="title">Resume Builder</span>
+    <span class="slash">/</span>
+    <span class="sub">tailoring studio</span>
+  </div>
+  <span class="pill"><span class="dot"></span>local · 127.0.0.1</span>
+  {% if provider_status %}
+  <span class="pill {{ 'warn' if provider_status.level == 'warn' else 'accent' }}"
+        title="{{ provider_status.detail }}"><span class="dot"></span>{% if provider_status.name == 'claude-code' %}Claude Code{% elif provider_status.name == 'anthropic-api' %}API key{% else %}Copy-paste mode{% endif %}</span>
+  {% endif %}
+  <div class="spacer"></div>
+  <a class="wizard-link" href="{{ url_for('about') }}">About</a>
+  <a class="wizard-link" href="{{ url_for('reflect') }}">Reflect</a>
+  <a class="wizard-link" href="{{ url_for('wizard.wizard_page') }}">No master yet? Build one →</a>
+</header>
+
+{% if provider_status %}
+<div class="ai-status ai-status--top {{ provider_status.level }}" role="status">
+  <span class="ai-dot" aria-hidden="true"></span>
+  <span><strong>{{ provider_status.label }}.</strong> {{ provider_status.detail }}</span>
+</div>
+{% endif %}
+
+<form id="form">
+<div class="workspace">
+
+  <!-- ============================== LEFT RAIL ============================== -->
+  <aside class="rail">
+
+    <!-- 1 · Master -->
+    <section class="card">
+      <div class="card-head">
+        <span class="num">1</span>
+        <h3>Master resume</h3>
+        <div class="right">
+          <label class="file-button" title="Upload .yaml / .yml">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Upload
+            <input type="file" id="master_file" accept=".yaml,.yml,.txt" hidden>
+          </label>
+        </div>
+      </div>
+      <div class="card-body tight">
+        <div class="yaml-shell">
+          <div class="yaml-toolbar">
+            <span class="lbl">file:</span><span class="val mono">master.yaml</span>
+            <span class="dot-sep">·</span>
+            <span class="lbl">chars:</span><span class="val mono" id="master-chars">0</span>
+            <span class="right">
+              <span class="lbl">session edits only — save to <code class="mono">master.yaml</code> to persist</span>
+            </span>
+          </div>
+          <textarea
+            id="master_yaml"
+            name="master_yaml"
+            rows="12"
+            class="yaml"
+            spellcheck="false"
+            required>{{ master_default }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · JD -->
+    <section class="card">
+      <div class="card-head">
+        <span class="num">2</span>
+        <h3>Job description</h3>
+        <div class="right">
+          <label class="file-button" title="Upload PDF / DOCX / MD / TXT">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Upload
+            <input type="file" id="jd_file" accept=".pdf,.docx,.md,.markdown,.txt,.text" hidden>
+          </label>
+          <span class="stat"><span class="v" id="jd-words">0</span> words</span>
+        </div>
+      </div>
+      <div class="card-body tight">
+        <div class="seg-row" style="margin-bottom: 10px;">
+          <label class="radio">
+            <input type="radio" name="jd_mode" value="paste" checked>
+            <span>I have a JD</span>
+          </label>
+          <label class="radio">
+            <input type="radio" name="jd_mode" value="target">
+            <span>No JD</span>
+          </label>
+        </div>
+
+        <div id="jd-paste-panel">
+          <textarea
+            id="jd_text"
+            name="jd_text"
+            rows="6"
+            spellcheck="false"
+            placeholder="Paste the job description here, or upload a PDF/DOCX/MD/TXT above…"></textarea>
+          <div class="row" style="margin-top: 10px;">
+            <button type="button" class="btn sm" id="btn-analyze">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+              Analyze JD
+            </button>
+            <span class="hint">heuristic · no LLM call</span>
+            <span class="hint" id="jd-analyzed-when" style="margin-left:auto;"></span>
+          </div>
+        </div>
+
+        <div id="jd-target-panel" hidden>
+          <p class="hint" style="margin-top: 0;">
+            Describe the role you want. The tool synthesizes JD-like signals
+            from a small role table, then uses the same tailor, ATS, and guard.
+          </p>
+          <label class="field">
+            <span class="lbl">Target role</span>
+            <input type="text" id="target_role" placeholder="e.g. Staff Backend Engineer">
+          </label>
+          <div class="grid-3" style="margin-top: 10px;">
+            <label class="field">
+              <span class="lbl">Seniority</span>
+              <select id="target_seniority">
+                <option value="">(infer)</option>
+                <option value="ic">IC</option>
+                <option value="senior">Senior</option>
+                <option value="staff">Staff</option>
+                <option value="manager">Manager</option>
+                <option value="founding-eng">Founding Eng</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="lbl">Industry</span>
+              <input type="text" id="target_industry" placeholder="fintech, healthtech">
+            </label>
+            <label class="field">
+              <span class="lbl">Company size</span>
+              <select id="target_company_size">
+                <option value="">(any)</option>
+                <option value="startup">Startup</option>
+                <option value="scaleup">Scaleup</option>
+                <option value="enterprise">Enterprise</option>
+                <option value="faang">FAANG</option>
+              </select>
+            </label>
+          </div>
+          <label class="field" style="margin-top: 10px;">
+            <span class="lbl">Must-include keywords</span>
+            <input type="text" id="target_must_include" placeholder="Go, Postgres, mentorship">
+          </label>
+          <div class="row" style="margin-top: 10px;">
+            <button type="button" class="btn sm" id="btn-analyze-target">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+              Analyze target
+            </button>
+            <span class="hint">deterministic · no LLM call</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Pointers -->
+    <section class="card">
+      <div class="card-head">
+        <span class="num">3</span>
+        <h3>Pointers</h3>
+        <div class="right">
+          <span class="hint" id="defaults-saved-note" hidden>Saved ✓</span>
+          <button type="button" class="btn sm" id="btn-save-defaults"
+                  title="Write these values to pointers.yaml so they pre-fill every future session (web + CLI).">
+            Save as defaults
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="grid-3" style="margin-bottom: 12px;">
+          <label class="field">
+            <span class="lbl">Length</span>
+            <select name="length">
+              <option value="">(default)</option>
+              <option value="1page">1 page</option>
+              <option value="2page">2 page</option>
+              <option value="450">450 words</option>
+              <option value="650">650 words</option>
+              <option value="900">900 words</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="lbl">Seniority</span>
+            <select name="seniority">
+              <option value="">(default)</option>
+              <option value="ic">IC</option>
+              <option value="senior">Senior</option>
+              <option value="staff">Staff</option>
+              <option value="manager">Manager</option>
+              <option value="founding-eng">Founding Eng</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="lbl">Context</span>
+            <select name="context">
+              <option value="">(default)</option>
+              <option value="startup">Startup</option>
+              <option value="faang">FAANG</option>
+              <option value="consulting">Consulting</option>
+              <option value="nonprofit">Nonprofit</option>
+              <option value="research">Research</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span class="lbl">Must-include keywords</span>
+          <div class="token-editor" id="must-include-editor">
+            <input type="text" id="must-include-input" placeholder="type, enter to add…">
+          </div>
+          <!-- shadow input — combined comma-separated list (what the backend reads) -->
+          <input type="hidden" name="must_include" id="must_include">
+        </label>
+
+        <label class="field" style="margin-top: 14px;">
+          <span class="lbl">Extra instructions <span class="hint">optional · applies to resume + cover letter</span></span>
+          <textarea name="extra_instructions" id="extra_instructions" rows="2" maxlength="2000"
+                    placeholder="e.g. emphasize leadership over hands-on coding · British English · more formal tone"></textarea>
+          <span class="hint">Style and emphasis only — the honesty guard still blocks anything not grounded in your master.</span>
+        </label>
+
+        <!-- Phase 10 item 1 — format preset picker -->
+        <label class="field" style="margin-top: 14px;">
+          <span class="lbl">Format preset</span>
+          <select name="preset" id="preset-select">
+            <option value="">Loading…</option>
+          </select>
+          <p class="hint" id="preset-guidance" style="margin-top: 4px;"></p>
+        </label>
+
+        <!-- Template customizer (adoption A1) — edits template.yaml -->
+        <details class="customizer" id="template-customizer">
+          <summary>Customize template — fonts, colors, margins, sections</summary>
+          <div class="customizer-body">
+            <div class="grid-3">
+              <label class="field">
+                <span class="lbl">Font family</span>
+                <input type="text" id="tc-font" list="tc-font-options" placeholder="Calibri">
+                <datalist id="tc-font-options">
+                  <option value="Calibri"><option value="Arial"><option value="Helvetica">
+                  <option value="Georgia"><option value="Garamond"><option value="Cambria">
+                  <option value="Times New Roman">
+                </datalist>
+              </label>
+              <label class="field">
+                <span class="lbl">Page</span>
+                <select id="tc-page-size">
+                  <option value="letter">US Letter</option>
+                  <option value="a4">A4</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="lbl">Accent color</span>
+                <input type="color" id="tc-accent" value="#2E5C8A">
+              </label>
+            </div>
+            <div class="grid-4">
+              <label class="field"><span class="lbl">Body pt</span>
+                <input type="number" id="tc-size-body" min="8" max="14" step="0.5"></label>
+              <label class="field"><span class="lbl">Role pt</span>
+                <input type="number" id="tc-size-role" min="8" max="16" step="0.5"></label>
+              <label class="field"><span class="lbl">Heading pt</span>
+                <input type="number" id="tc-size-heading" min="9" max="18" step="0.5"></label>
+              <label class="field"><span class="lbl">Name pt</span>
+                <input type="number" id="tc-size-name" min="12" max="28" step="0.5"></label>
+            </div>
+            <div class="grid-4">
+              <label class="field"><span class="lbl">Margin top/bottom (in)</span>
+                <input type="number" id="tc-margin-tb" min="0.3" max="1.5" step="0.05"></label>
+              <label class="field"><span class="lbl">Margin left/right (in)</span>
+                <input type="number" id="tc-margin-lr" min="0.3" max="1.5" step="0.05"></label>
+              <label class="field"><span class="lbl">Line spacing</span>
+                <input type="number" id="tc-line" min="1" max="1.6" step="0.05"></label>
+              <label class="field"><span class="lbl">Space after ¶ (pt)</span>
+                <input type="number" id="tc-para-after" min="0" max="12" step="1"></label>
+            </div>
+            <div class="field">
+              <span class="lbl">Sections — untick to hide, reorder with arrows</span>
+              <ul class="order-list" id="tc-sections"></ul>
+            </div>
+            <div class="row" style="gap: 8px; align-items: center;">
+              <button type="button" class="btn accent sm" id="btn-save-template">Save &amp; use</button>
+              <span class="hint" id="tc-saved-note" hidden>Saved — “Custom · template.yaml” selected ✓</span>
+              <span class="hint" id="tc-seed-note" style="margin-left:auto"></span>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- 4 · Generate -->
+    <div class="gen-bar">
+      <div class="seg-row">
+        <span class="hint" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;">Mode</span>
+        <div class="seg" id="mode-seg">
+          <button type="button" data-mode="auto" class="on">Auto · claude</button>
+          <button type="button" data-mode="paste">Copy-paste</button>
+        </div>
+      </div>
+
+      <!-- Auto mode actions -->
+      <div class="actions" id="mode-auto">
+        <button type="button" class="btn accent" id="btn-generate">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/></svg>
+          Generate resume
+        </button>
+        <button type="button" class="btn" id="btn-generate-cover">
+          Cover letter
+        </button>
+        <label class="radio" style="margin-left: auto;" title="Also convert .docx to PDF (requires Word or LibreOffice). Bock recommends PDF for ATS submissions.">
+          <input type="checkbox" id="opt-also-pdf">
+          <span>Also PDF</span>
+          <span class="hint" id="pdf-availability"></span>
+        </label>
+      </div>
+
+      <!-- Copy-paste mode -->
+      <div class="paste-pane" id="mode-paste">
+        <div class="row" style="gap: 6px;">
+          <button type="button" class="btn sm" id="btn-show-prompt">Show resume prompt</button>
+          <button type="button" class="btn sm" id="btn-show-cover-prompt">Show cover prompt</button>
+          <button type="button" class="btn sm ghost hidden" id="btn-copy-prompt">Copy</button>
+        </div>
+        <textarea id="prompt_out" rows="4" readonly placeholder="Prompt will appear here. Paste it into any Claude session."></textarea>
+        <label for="response_text">Paste Claude's JSON reply</label>
+        <textarea id="response_text" name="response_text" rows="4" placeholder='{"summary":"...","sections":[...]} or {"salutation":"...","paragraphs":[...]}'></textarea>
+        <div class="row" style="gap: 6px;">
+          <button type="button" class="btn accent sm" id="btn-from-response">Render resume</button>
+          <button type="button" class="btn sm" id="btn-from-cover-response">Render cover</button>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <span id="gen-meta-left">ready</span>
+        <span id="gen-meta-right" class="mono"></span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ============================== RIGHT CANVAS ============================== -->
+  <main class="canvas">
+
+    <!-- canvas head: tabs + result actions -->
+    <div class="canvas-head">
+      <div class="tabs" id="tabs">
+        <button type="button" data-tab="analysis" class="on">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+          Analysis
+          <span class="badge" id="ats-badge-tab">—</span>
+        </button>
+        <button type="button" data-tab="preview">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          Preview
+        </button>
+        <button type="button" data-tab="diff">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 3v12"/><path d="M9 21v-3"/><circle cx="9" cy="18" r="3"/><circle cx="9" cy="6" r="3"/><circle cx="15" cy="6" r="3"/><path d="M21 12c0 5-3 6-6 6"/></svg>
+          Tailor diff
+          <span class="badge hidden" id="diff-badge-tab">0</span>
+        </button>
+        <button type="button" data-tab="lints">
+          Style lints
+          <span class="badge hidden" id="lints-badge-tab">0</span>
+        </button>
+        <button type="button" data-tab="cover">
+          Cover letter
+        </button>
+      </div>
+      <div class="spacer"></div>
+      <span class="hint" id="result-name"></span>
+    </div>
+
+    <!-- status banner sits between tab strip and panes -->
+    <div class="canvas-body">
+      <div class="status-banner" id="status">
+        <span class="dot"></span>
+        <span id="status-line"></span>
+      </div>
+
+      <!-- ============== ANALYSIS ============== -->
+      <section class="pane on" data-pane="analysis">
+
+        <div class="analysis-grid">
+
+          <!-- ATS card -->
+          <div class="card gauge-card" id="ats-card">
+            <div class="gauge-head">
+              <h3>ATS coverage</h3>
+              <span class="chip" id="ats-tone">—</span>
+            </div>
+            <div class="gauge">
+              <div class="gauge-top">
+                <div class="gauge-score" id="ats-score">—<span class="pct">%</span></div>
+                <div class="gauge-label">matched<span class="v" id="ats-matched-count">0 / 0</span></div>
+              </div>
+              <div class="bar" id="ats-bar"><i style="width:0%"></i></div>
+              <div class="legend">
+                <span><span class="sw" style="background:var(--good)"></span>≥ 80 green</span>
+                <span><span class="sw" style="background:var(--warn)"></span>60–79 amber</span>
+                <span><span class="sw" style="background:var(--bad)"></span>&lt; 60 red</span>
+              </div>
+            </div>
+            <hr style="border:0; border-top:1px solid var(--rule); margin: 14px 0;">
+            <div class="signal" style="margin-bottom: 10px;">
+              <span class="name">Matched in .docx</span>
+              <div class="chip-grid" id="ats-matched"></div>
+            </div>
+            <div class="signal">
+              <span class="name">Missing</span>
+              <div class="chip-grid" id="ats-missing"></div>
+            </div>
+            <ul id="ats-warnings" class="signal" style="list-style: none; padding: 0; margin-top: 10px; font-size: 12px; color: var(--bad); display: grid; gap: 4px;"></ul>
+          </div>
+
+          <!-- JD signals -->
+          <div class="card">
+            <div class="card-head">
+              <h3>JD signals</h3>
+              <div class="right">
+                <span class="stat">heuristic · top keywords + must-haves</span>
+              </div>
+            </div>
+            <div class="card-body" id="signals-body">
+              <div class="empty">Paste a JD and click <b>Analyze JD</b> — or generate to populate.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Honesty guard strip -->
+        <div class="card">
+          <div class="card-head">
+            <h3>Honesty guard</h3>
+            <div class="right">
+              <span class="chip" id="guard-overall">— not run yet</span>
+              <span class="hint">numbers + proper nouns checked vs. master / variants / JD</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="guard-strip">
+              <div class="guard-stat"><span class="v" id="guard-kept">—</span><span class="lbl">kept</span></div>
+              <div class="guard-stat muted"><span class="v" id="guard-dropped">—</span><span class="lbl">dropped by tailor</span></div>
+              <div class="guard-stat bad"><span class="v" id="guard-rejected">—</span><span class="lbl">rejected by guard</span></div>
+              <div class="guard-stat warn"><span class="v" id="guard-lints">—</span><span class="lbl">style lints</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bock formatting (only shown if warnings) -->
+        <div class="card hidden" id="bock-card">
+          <div class="card-head">
+            <h3>Bock formatting</h3>
+            <div class="right"><span class="hint">11pt body · compact ATS-safe margins</span></div>
+          </div>
+          <div class="card-body" id="bock-body"></div>
+        </div>
+      </section>
+
+      <!-- ============== PREVIEW ============== -->
+      <section class="pane" data-pane="preview">
+        <div class="preview-note">
+          <span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--muted);"></span>
+          Text-only preview rendered from the tailored payload. The downloadable
+          <code>.docx</code> uses fonts/margins from <code>template.yaml</code>.
+          <span style="margin-left:auto;" id="preview-download-row"></span>
+        </div>
+        <div class="doc-frame" id="preview-frame">
+          <div class="empty big">No tailored output yet — click <b>Generate resume</b> on the left.</div>
+        </div>
+      </section>
+
+      <!-- ============== DIFF ============== -->
+      <section class="pane" data-pane="diff">
+        <div class="card">
+          <div class="card-head">
+            <h3>Tailor diff</h3>
+            <div class="right" id="diff-summary-chips">
+              <span class="chip">not run yet</span>
+            </div>
+          </div>
+          <div class="card-body" id="diff-body">
+            <div class="empty">Side-by-side master ↔ tailored will appear here after generate.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== LINTS ============== -->
+      <section class="pane" data-pane="lints">
+        <div class="card">
+          <div class="card-head">
+            <h3>Style suggestions</h3>
+            <div class="right"><span class="hint">advisory only — nothing dropped</span></div>
+          </div>
+          <div id="lints-body">
+            <div class="empty" style="margin: 16px;">No lints yet.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== COVER ============== -->
+      <section class="pane" data-pane="cover">
+        <div class="card">
+          <div class="card-head">
+            <h3>Cover letter</h3>
+            <div class="right" id="cover-summary-chips">
+              <span class="chip">not generated yet</span>
+            </div>
+          </div>
+          <div class="card-body" style="background: var(--bg);">
+            <div class="cover-frame">
+              <article class="cover-doc" id="cover-text">
+                Generate a cover letter on the left — the plain text will appear here, and the .docx will download.
+              </article>
+            </div>
+            <div id="cover-warnings-body" style="margin-top: 14px;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+</div>
+</form>
+
+<!-- ============================== JS ============================== -->
+<script>
+  // ----------------------------------------------------------------
+  // Tabs
+  // ----------------------------------------------------------------
+  function selectTab(target) {
+    document.querySelectorAll('#tabs button').forEach(b => {
+      b.classList.toggle('on', b.dataset.tab === target);
+    });
+    document.querySelectorAll('.pane').forEach(p => {
+      p.classList.toggle('on', p.dataset.pane === target);
+    });
+  }
+  document.querySelectorAll('#tabs button').forEach(b => {
+    b.addEventListener('click', () => selectTab(b.dataset.tab));
+  });
+
+  // ----------------------------------------------------------------
+  // Mode toggle (Auto / Copy-paste)
+  // ----------------------------------------------------------------
+  document.querySelectorAll('#mode-seg button').forEach(b => {
+    b.addEventListener('click', () => {
+      const m = b.dataset.mode;
+      document.querySelectorAll('#mode-seg button').forEach(x => x.classList.toggle('on', x === b));
+      document.getElementById('mode-auto').classList.toggle('hidden', m !== 'auto');
+      document.getElementById('mode-paste').classList.toggle('on', m === 'paste');
+    });
+  });
+
+  // ----------------------------------------------------------------
+  // Status banner
+  // ----------------------------------------------------------------
+  function setStatus(msg, kind) {
+    const s = document.getElementById('status');
+    const line = document.getElementById('status-line');
+    s.classList.remove('ok', 'error', 'pending');
+    if (kind) s.classList.add(kind);
+    s.classList.add('show');
+    line.textContent = msg;
+  }
+  function clearStatus() { document.getElementById('status').classList.remove('show'); }
+
+  function setGenMeta(left, right) {
+    document.getElementById('gen-meta-left').textContent = left || '';
+    document.getElementById('gen-meta-right').textContent = right || '';
+  }
+
+  // ----------------------------------------------------------------
+  // Master / JD char + word counters
+  // ----------------------------------------------------------------
+  function updateMasterStats() {
+    const v = document.getElementById('master_yaml').value;
+    document.getElementById('master-chars').textContent = v.length.toLocaleString();
+  }
+  function updateJdStats() {
+    const v = document.getElementById('jd_text').value.trim();
+    const words = v ? v.split(/\s+/).length : 0;
+    document.getElementById('jd-words').textContent = words.toLocaleString();
+  }
+  document.getElementById('master_yaml').addEventListener('input', updateMasterStats);
+  document.getElementById('jd_text').addEventListener('input', updateJdStats);
+  updateMasterStats(); updateJdStats();
+
+  // ----------------------------------------------------------------
+  // Must-include token editor
+  // ----------------------------------------------------------------
+  const tokenEditor = document.getElementById('must-include-editor');
+  const tokenInput  = document.getElementById('must-include-input');
+  const mustInclude = document.getElementById('must_include');
+  let tokens = [];
+  function renderTokens() {
+    [...tokenEditor.querySelectorAll('.chip')].forEach(n => n.remove());
+    tokens.forEach((t, i) => {
+      const c = document.createElement('span');
+      c.className = 'chip tone-accent';
+      c.textContent = t;
+      const x = document.createElement('span');
+      x.className = 'close';
+      x.textContent = '×';
+      x.addEventListener('click', (e) => { e.stopPropagation(); tokens.splice(i, 1); renderTokens(); });
+      c.appendChild(x);
+      tokenEditor.insertBefore(c, tokenInput);
+    });
+    mustInclude.value = tokens.join(', ');
+  }
+  function addToken(raw) {
+    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(t => {
+      if (!tokens.includes(t)) tokens.push(t);
+    });
+    renderTokens();
+  }
+  tokenInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (tokenInput.value.trim()) { addToken(tokenInput.value); tokenInput.value = ''; }
+    } else if (e.key === 'Backspace' && !tokenInput.value && tokens.length) {
+      tokens.pop(); renderTokens();
+    }
+  });
+  tokenInput.addEventListener('blur', () => {
+    if (tokenInput.value.trim()) { addToken(tokenInput.value); tokenInput.value = ''; }
+  });
+  tokenEditor.addEventListener('click', () => tokenInput.focus());
+
+  // ----------------------------------------------------------------
+  // Helpers
+  // ----------------------------------------------------------------
+  function currentJdMode() {
+    const checked = document.querySelector("input[name='jd_mode']:checked");
+    return checked ? checked.value : 'paste';
+  }
+  function buildTargetRolePayload() {
+    const role = document.getElementById('target_role').value.trim();
+    if (!role) return null;
+    const seniority = document.getElementById('target_seniority').value || null;
+    const industry = document.getElementById('target_industry').value.trim() || null;
+    const company_size = document.getElementById('target_company_size').value || null;
+    const must_include = document.getElementById('target_must_include').value.trim();
+    const payload = { role };
+    if (seniority) payload.seniority = seniority;
+    if (industry) payload.industry = industry;
+    if (company_size) payload.company_size = company_size;
+    if (must_include) payload.must_include = must_include;
+    return payload;
+  }
+  function formData(extra) {
+    // Make sure tokens are flushed
+    if (tokenInput.value.trim()) { addToken(tokenInput.value); tokenInput.value = ''; }
+    const fd = new FormData(document.getElementById('form'));
+    if (currentJdMode() === 'target') {
+      fd.set('jd_text', '');
+      const target = buildTargetRolePayload();
+      if (target) fd.set('target_role_json', JSON.stringify(target));
+    } else {
+      fd.delete('target_role_json');
+    }
+    if (extra) for (const k of Object.keys(extra)) fd.set(k, extra[k]);
+    return fd;
+  }
+  function escapeHtml(s) {
+    return (s == null ? '' : String(s))
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function uploadAndExtract(file) {
+    const fd = new FormData();
+    fd.set('file', file);
+    const res = await fetch('/api/extract-text', { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    return await res.json();
+  }
+
+  document.getElementById('jd_file').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    setStatus(`Reading ${f.name}…`, 'pending');
+    try {
+      const out = await uploadAndExtract(f);
+      document.getElementById('jd_text').value = out.text;
+      updateJdStats();
+      setStatus(`Loaded ${out.filename} (${out.chars.toLocaleString()} chars from ${out.kind})`, 'ok');
+    } catch (err) { setStatus(err.message, 'error'); }
+    finally { e.target.value = ''; }
+  });
+
+  document.getElementById('master_file').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    const name = f.name.toLowerCase();
+    if (!(name.endsWith('.yaml') || name.endsWith('.yml') || name.endsWith('.txt'))) {
+      setStatus('Master must be YAML (.yaml/.yml) for now.', 'error');
+      e.target.value = ''; return;
+    }
+    setStatus(`Reading ${f.name}…`, 'pending');
+    try {
+      const out = await uploadAndExtract(f);
+      document.getElementById('master_yaml').value = out.text;
+      updateMasterStats();
+      setStatus(`Loaded ${out.filename} (${out.chars.toLocaleString()} chars)`, 'ok');
+    } catch (err) { setStatus(err.message, 'error'); }
+    finally { e.target.value = ''; }
+  });
+
+  // ----------------------------------------------------------------
+  // JD Analyze
+  // ----------------------------------------------------------------
+  function syncJdMode() {
+    const mode = currentJdMode();
+    document.getElementById('jd-paste-panel').hidden = mode !== 'paste';
+    document.getElementById('jd-target-panel').hidden = mode !== 'target';
+    updateJdStats();
+  }
+  document.querySelectorAll("input[name='jd_mode']").forEach((el) => {
+    el.addEventListener('change', syncJdMode);
+  });
+  syncJdMode();
+
+  const SIGNAL_FIELDS = [
+    ['title',              'Title'],
+    ['inferred_seniority', 'Seniority'],
+    ['role_archetype',     'Role archetype'],
+    ['years_required',     'Years required'],
+    ['must_haves',         'Must-haves'],
+    ['nice_to_haves',      'Nice-to-haves'],
+    ['top_keywords',       'Top keywords'],
+    ['scope_signals',      'Scope / scale'],
+    ['soft_skills',        'Soft skills'],
+    ['company_specifics',  'Company specifics'],
+    ['responsibilities',   'Responsibilities'],
+  ];
+
+  function showSignals(obj) {
+    const body = document.getElementById('signals-body');
+    body.innerHTML = '';
+    if (!obj || Object.keys(obj).length === 0) {
+      body.innerHTML = '<div class="empty">No signals to show.</div>';
+      return;
+    }
+    const grid = document.createElement('div');
+    grid.className = 'signals-list';
+    SIGNAL_FIELDS.forEach(([key, label]) => {
+      const val = obj[key];
+      if (val == null || (Array.isArray(val) && val.length === 0)) return;
+      const cell = document.createElement('div');
+      cell.className = 'signal';
+      const wide = Array.isArray(val) && val.length > 3;
+      if (wide) cell.style.gridColumn = '1 / -1';
+      cell.innerHTML = `<span class="name">${escapeHtml(label)}</span>`;
+      if (Array.isArray(val)) {
+        const ul = document.createElement('ul');
+        val.slice(0, 16).forEach(v => {
+          const li = document.createElement('li');
+          li.className = 'chip outline';
+          li.textContent = typeof v === 'string' ? v : JSON.stringify(v);
+          ul.appendChild(li);
+        });
+        cell.appendChild(ul);
+      } else {
+        const v = document.createElement('span'); v.className = 'val';
+        v.textContent = String(val);
+        cell.appendChild(v);
+      }
+      grid.appendChild(cell);
+    });
+    body.appendChild(grid);
+  }
+
+  document.getElementById('btn-analyze').addEventListener('click', async () => {
+    const jd = document.getElementById('jd_text').value.trim();
+    if (!jd) { setStatus('Paste a JD first.', 'error'); return; }
+    setStatus('Extracting signals…', 'pending');
+    const fd = new FormData(); fd.set('jd_text', jd);
+    const res = await fetch('/api/analyze-jd', { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch (_) {}
+      setStatus(msg, 'error'); return;
+    }
+    const obj = await res.json();
+    showSignals(obj);
+    document.getElementById('jd-analyzed-when').textContent = '✓ analyzed';
+    setStatus('JD analyzed.', 'ok');
+  });
+
+  async function analyzeTargetRole() {
+    const target = buildTargetRolePayload();
+    if (!target) { setStatus('Enter a target role first.', 'error'); return; }
+    setStatus('Synthesizing target-role signals…', 'pending');
+    const fd = new FormData();
+    fd.set('target_role_json', JSON.stringify(target));
+    const res = await fetch('/api/analyze-target-role', { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch (_) {}
+      setStatus(msg, 'error'); return;
+    }
+    showSignals(await res.json());
+    setStatus('Target role analyzed.', 'ok');
+  }
+  document.getElementById('btn-analyze-target').addEventListener('click', analyzeTargetRole);
+
+  ['target_role','target_seniority','target_industry','target_company_size','target_must_include']
+    .forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      let t = null;
+      el.addEventListener('change', analyzeTargetRole);
+      if (el.tagName === 'INPUT') {
+        el.addEventListener('input', () => {
+          if (t) clearTimeout(t);
+          t = setTimeout(() => {
+            if (currentJdMode() === 'target' && buildTargetRolePayload()) analyzeTargetRole();
+          }, 600);
+        });
+      }
+    });
+
+  // ----------------------------------------------------------------
+  // ATS
+  // ----------------------------------------------------------------
+  function resetATS() {
+    document.getElementById('ats-score').innerHTML = '—<span class="pct">%</span>';
+    document.getElementById('ats-matched-count').textContent = '0 / 0';
+    document.getElementById('ats-bar').querySelector('i').style.width = '0%';
+    document.getElementById('ats-bar').classList.remove('mid', 'bad');
+    document.getElementById('ats-matched').innerHTML = '';
+    document.getElementById('ats-missing').innerHTML = '';
+    document.getElementById('ats-warnings').innerHTML = '';
+    const tone = document.getElementById('ats-tone');
+    tone.className = 'chip'; tone.textContent = '—';
+    document.getElementById('ats-badge-tab').textContent = '—';
+  }
+  function showATS(report) {
+    if (!report || (!report.total_checked && !(report.warnings || []).length)) { resetATS(); return; }
+    const pct = Math.round((report.score || 0) * 100);
+    document.getElementById('ats-score').innerHTML = `${pct}<span class="pct">%</span>`;
+    document.getElementById('ats-matched-count').textContent = `${(report.matched || []).length} / ${report.total_checked || 0}`;
+    const bar = document.getElementById('ats-bar');
+    bar.classList.remove('mid', 'bad');
+    if (pct < 60) bar.classList.add('bad');
+    else if (pct < 80) bar.classList.add('mid');
+    bar.querySelector('i').style.width = pct + '%';
+
+    const tone = document.getElementById('ats-tone');
+    tone.className = 'chip';
+    if (pct >= 80) { tone.classList.add('tone-good'); tone.textContent = 'good'; }
+    else if (pct >= 60) { tone.classList.add('tone-warn'); tone.textContent = 'mid'; }
+    else { tone.classList.add('tone-bad'); tone.textContent = 'low'; }
+    document.getElementById('ats-badge-tab').textContent = pct + '%';
+
+    const matched = document.getElementById('ats-matched');
+    const missing = document.getElementById('ats-missing');
+    matched.innerHTML = ''; missing.innerHTML = '';
+    (report.matched || []).forEach(k => {
+      const c = document.createElement('span'); c.className = 'chip tone-good'; c.textContent = k;
+      matched.appendChild(c);
+    });
+    (report.missing || []).forEach(k => {
+      const c = document.createElement('span'); c.className = 'chip tone-bad'; c.textContent = k;
+      missing.appendChild(c);
+    });
+    const warns = document.getElementById('ats-warnings');
+    warns.innerHTML = '';
+    (report.warnings || []).forEach(w => {
+      const li = document.createElement('li'); li.textContent = w.message; warns.appendChild(li);
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Guard warnings + Lints
+  // ----------------------------------------------------------------
+  function showGuardWarnings(arr) {
+    document.getElementById('guard-rejected').textContent = (arr || []).length;
+    // Tone the overall chip
+    const chip = document.getElementById('guard-overall');
+    chip.className = 'chip';
+    if (!arr || !arr.length) { chip.classList.add('tone-good'); chip.textContent = 'no invention detected'; }
+    else { chip.classList.add('tone-bad'); chip.textContent = `${arr.length} rejected`; }
+  }
+
+  function showLints(arr) {
+    const body = document.getElementById('lints-body');
+    body.innerHTML = '';
+    document.getElementById('guard-lints').textContent = (arr || []).length;
+    const badge = document.getElementById('lints-badge-tab');
+    if (!arr || !arr.length) {
+      badge.classList.add('hidden');
+      body.innerHTML = '<div class="empty" style="margin:16px;">No style suggestions.</div>';
+      return;
+    }
+    badge.classList.remove('hidden');
+    badge.textContent = arr.length;
+    const ICONS = { cliche: '!', 'verb-diversity': '↻', 'impact-density': '#', length: '⇲' };
+    arr.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'lint';
+      row.dataset.rule = w.rule || '';
+      row.innerHTML = `
+        <div class="rule"><span class="ic">${escapeHtml(ICONS[w.rule] || '·')}</span>${escapeHtml(w.rule || 'lint')}</div>
+        <div class="msg">${escapeHtml(w.message || '')}
+          ${w.snippet ? `<div class="snip">${escapeHtml((w.snippet || '').slice(0, 320))}</div>` : ''}
+          ${w.suggestion ? `<div class="hint" style="margin-top:4px;">→ ${escapeHtml(w.suggestion)}</div>` : ''}
+        </div>
+        <div class="src">${escapeHtml(w.source_id || '')}</div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  function showBock(arr) {
+    const card = document.getElementById('bock-card');
+    const body = document.getElementById('bock-body');
+    body.innerHTML = '';
+    if (!arr || !arr.length) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    arr.forEach(w => {
+      const li = document.createElement('div');
+      li.style.padding = '6px 0';
+      li.innerHTML = `<span class="mono" style="color:var(--muted);">(${escapeHtml(w.rule)})</span> ${escapeHtml(w.message)}`;
+      body.appendChild(li);
+    });
+  }
+
+  // ----------------------------------------------------------------
+  // Diff + Preview
+  // ----------------------------------------------------------------
+  function resetDiff() {
+    document.getElementById('diff-body').innerHTML = '<div class="empty">Side-by-side master ↔ tailored will appear here after generate.</div>';
+    document.getElementById('diff-summary-chips').innerHTML = '<span class="chip">not run yet</span>';
+    document.getElementById('diff-badge-tab').classList.add('hidden');
+    document.getElementById('preview-frame').innerHTML = '<div class="empty big">No tailored output yet — click <b>Generate resume</b> on the left.</div>';
+  }
+
+  function renderDiffSummary(payload) {
+    const m = (payload.summary_master || '').trim();
+    const t = (payload.summary_tailored || '').trim();
+    if (!m && !t) return null;
+    const wrap = document.createElement('div');
+    wrap.className = 'diff-pair';
+    wrap.innerHTML = `
+      <div class="diff-side master">
+        <h4>Master summary</h4>
+        <div class="diff-bullet"><div class="text">${escapeHtml(m || '(none)')}</div></div>
+      </div>
+      <div class="diff-arrow">→</div>
+      <div class="diff-side tailored">
+        <h4>Tailored summary <span class="stat">${payload.summary_changed ? '<span class="v">rewritten</span>' : '<span class="v">unchanged</span>'}</span></h4>
+        <div class="diff-bullet">
+          <div class="meta">${payload.summary_changed ? '<span class="tag rewritten">rewritten</span>' : '<span class="tag kept">verbatim</span>'}</div>
+          <div class="text">${escapeHtml(t || '(none)')}</div>
+        </div>
+      </div>
+    `;
+    return wrap;
+  }
+
+  function renderDiff(payload) {
+    const body = document.getElementById('diff-body');
+    body.innerHTML = '';
+    const s = payload.stats || {};
+    document.getElementById('diff-summary-chips').innerHTML = `
+      <span class="chip tone-good">${s.kept || 0} kept</span>
+      <span class="chip">${s.dropped || 0} dropped</span>
+      <span class="chip tone-bad">${s.guard_dropped || 0} rejected</span>
+    `;
+    const dbt = document.getElementById('diff-badge-tab');
+    dbt.classList.remove('hidden');
+    dbt.textContent = `${s.kept || 0}/${s.total || 0}`;
+    document.getElementById('guard-kept').textContent = s.kept || 0;
+    document.getElementById('guard-dropped').textContent = s.dropped || 0;
+
+    const sumNode = renderDiffSummary(payload);
+    if (sumNode) body.appendChild(sumNode);
+
+    payload.sections.forEach(item => {
+      const head = document.createElement('div');
+      head.className = 'diff-group-head';
+      head.innerHTML = `<h3>${escapeHtml(item.container_label || '')}</h3><span class="id">${escapeHtml(item.container_id || '')}</span>`;
+      body.appendChild(head);
+
+      const pair = document.createElement('div');
+      pair.className = 'diff-pair';
+
+      const left = document.createElement('div');  left.className = 'diff-side master';
+      const right = document.createElement('div'); right.className = 'diff-side tailored';
+      left.innerHTML  = `<h4>Master <span class="stat"><span class="v">${item.bullets.length}</span> bullets</span></h4>`;
+      const surfaced = item.bullets.filter(b => b.kind !== 'dropped').length;
+      right.innerHTML = `<h4>Tailored <span class="stat"><span class="v">${surfaced}</span> surfaced</span></h4>`;
+
+      item.bullets.forEach(b => {
+        // master side
+        const mRow = document.createElement('div');
+        mRow.className = 'diff-bullet';
+        if (b.kind === 'dropped') mRow.classList.add('dropped');
+        const tagClass = b.kind === 'kept' ? 'kept' : (b.kind === 'dropped' ? 'dropped' : 'rejected');
+        const tagText  = b.kind === 'kept' ? 'kept' : (b.kind === 'dropped' ? 'dropped' : 'rejected');
+        const metaBits = [
+          `<span class="id">${escapeHtml(b.source_id || '')}</span>`,
+          b.master_impact != null ? `<span>impact ${b.master_impact}</span>` : '',
+          (b.master_tags && b.master_tags.length) ? `<span>${escapeHtml(b.master_tags.join(', '))}</span>` : '',
+          `<span class="tag ${tagClass}">${tagText}</span>`,
+        ].filter(Boolean).join('');
+        mRow.innerHTML = `<div class="meta">${metaBits}</div><div class="text">${escapeHtml(b.master_text || '')}</div>`;
+        left.appendChild(mRow);
+
+        // tailored side
+        if (b.kind === 'dropped') return; // nothing on the right
+        const tRow = document.createElement('div');
+        tRow.className = 'diff-bullet';
+        const rewritten = b.rewritten || '';
+        const verbatim = rewritten.trim() === (b.master_text || '').trim();
+        const tTagClass = b.kind === 'guard-dropped' ? 'rejected' : (verbatim ? 'kept' : 'rewritten');
+        const tTagText  = b.kind === 'guard-dropped' ? 'rejected' : (verbatim ? 'verbatim' : 'rewritten');
+        if (b.kind === 'guard-dropped') tRow.classList.add('rejected');
+        let html = `<div class="meta"><span class="id">→ ${escapeHtml(b.source_id || '')}</span><span class="tag ${tTagClass}">${tTagText}</span></div><div class="text">${escapeHtml(rewritten)}</div>`;
+        if (b.kind === 'guard-dropped' && b.guard_reason) {
+          html += `<div class="reject">${escapeHtml(b.guard_reason)}</div>`;
+        }
+        tRow.innerHTML = html;
+        right.appendChild(tRow);
+      });
+
+      const arrow = document.createElement('div'); arrow.className = 'diff-arrow'; arrow.textContent = '→';
+      pair.appendChild(left); pair.appendChild(arrow); pair.appendChild(right);
+      body.appendChild(pair);
+    });
+  }
+
+  function renderPreview(payload) {
+    const frame = document.getElementById('preview-frame');
+    frame.innerHTML = '';
+    const doc = document.createElement('article');
+    doc.className = 'doc';
+
+    // Heading line — we don't get name from the diff payload, so fall back to master_yaml first key
+    let name = '';
+    try {
+      const m = document.getElementById('master_yaml').value;
+      const nameMatch = m.match(/^\s*name\s*:\s*(.+?)\s*$/m);
+      if (nameMatch) name = nameMatch[1].replace(/^["']|["']$/g, '');
+    } catch (_) {}
+    if (name) doc.innerHTML += `<h1>${escapeHtml(name)}</h1>`;
+
+    if ((payload.summary_tailored || '').trim()) {
+      doc.innerHTML += `<h2>Summary</h2><p>${escapeHtml(payload.summary_tailored)}</p>`;
+    }
+
+    payload.sections.forEach(sec => {
+      const surfaced = sec.bullets.filter(b => b.kind === 'kept');
+      if (!surfaced.length) return;
+      doc.innerHTML += `<h2>${escapeHtml(sec.container_kind === 'project' ? 'Projects' : 'Experience')}</h2>`;
+      const role = document.createElement('h3');
+      role.className = 'role';
+      role.innerHTML = `<span>${escapeHtml(sec.container_label || '')}</span><span class="when mono">${escapeHtml(sec.container_id || '')}</span>`;
+      doc.appendChild(role);
+      const ul = document.createElement('ul');
+      surfaced.forEach(b => {
+        const li = document.createElement('li');
+        li.textContent = b.rewritten || b.master_text;
+        ul.appendChild(li);
+      });
+      doc.appendChild(ul);
+    });
+
+    frame.appendChild(doc);
+  }
+
+  async function fetchAndShowDiff(resultId) {
+    try {
+      const res = await fetch('/api/diff/' + encodeURIComponent(resultId));
+      if (!res.ok) return;
+      const payload = await res.json();
+      renderDiff(payload);
+      renderPreview(payload);
+    } catch (_) {}
+  }
+
+  // ----------------------------------------------------------------
+  // Generate flows
+  // ----------------------------------------------------------------
+  async function downloadDocx(url, fd, downloadName) {
+    setStatus('Tailoring & rendering…', 'pending');
+    setGenMeta('running…', '');
+    resetATS(); resetDiff();
+    showGuardWarnings([]); showLints([]); showBock([]);
+    document.getElementById('result-name').innerHTML = '';
+
+    const t0 = performance.now();
+    const res = await fetch(url, { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || msg; if (j.hint) msg += ' — ' + j.hint; }
+      catch (_) {}
+      setStatus(msg, 'error');
+      setGenMeta('error', '');
+      return;
+    }
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
+    const warnHeader = res.headers.get('X-Guard-Warnings');
+    if (warnHeader) { try { showGuardWarnings(JSON.parse(warnHeader)); } catch (_) {} } else { showGuardWarnings([]); }
+    const lintHeader = res.headers.get('X-Lint-Warnings');
+    if (lintHeader) { try { showLints(JSON.parse(lintHeader)); } catch (_) {} } else { showLints([]); }
+    const sigHeader = res.headers.get('X-JD-Signals');
+    if (sigHeader) { try { showSignals(JSON.parse(sigHeader)); } catch (_) {} }
+    const atsHeader = res.headers.get('X-ATS-Report');
+    if (atsHeader) { try { showATS(JSON.parse(atsHeader)); } catch (_) {} }
+    const bockHeader = res.headers.get('X-Bock-Formatting');
+    if (bockHeader) { try { showBock(JSON.parse(bockHeader)); } catch (_) {} }
+    const resultId = res.headers.get('X-Result-Id');
+    if (resultId) fetchAndShowDiff(resultId);
+
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl; a.download = downloadName;
+    document.body.appendChild(a); a.click(); a.remove();
+
+    // Make the file accessible from canvas-head + preview download link
+    document.getElementById('result-name').innerHTML =
+      `<span class="mono" style="color:var(--ink-2);">${escapeHtml(downloadName)}</span> · <a class="wizard-link" href="${objUrl}" download="${escapeHtml(downloadName)}">re-download</a>`;
+    document.getElementById('preview-download-row').innerHTML =
+      `<a class="wizard-link" href="${objUrl}" download="${escapeHtml(downloadName)}">download .docx</a>`;
+
+    setStatus(`Downloaded ${downloadName}.`, 'ok');
+    const sizeKb = Math.round(blob.size / 102.4) / 10;
+    setGenMeta(`done · ${elapsed}s`, `${sizeKb} KB`);
+
+    // Phase 8: also convert to PDF when the user opted in.
+    if (document.getElementById('opt-also-pdf')?.checked) {
+      await alsoConvertToPdf(blob, downloadName);
+    }
+  }
+
+  // ---------- Phase 8: PDF conversion ----------
+
+  async function alsoConvertToPdf(docxBlob, docxName) {
+    const pdfName = docxName.replace(/\.docx$/i, '.pdf');
+    setStatus(`Converting to PDF (${pdfName})…`, 'pending');
+    const fd = new FormData();
+    fd.append('file', docxBlob, docxName);
+    const res = await fetch('/api/docx-to-pdf', { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `PDF conversion failed (HTTP ${res.status})`;
+      try {
+        const j = await res.json();
+        msg = j.hint || j.detail || j.error || msg;
+      } catch (_) {}
+      setStatus(msg, 'error');
+      return;
+    }
+    const pdfBlob = await res.blob();
+    const converter = res.headers.get('X-PDF-Converter') || 'unknown';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(pdfBlob);
+    a.download = pdfName;
+    document.body.appendChild(a); a.click(); a.remove();
+    setStatus(`Downloaded ${pdfName} (via ${converter}).`, 'ok');
+  }
+
+  // Probe the available converter on load and surface the result in the UI.
+  (async function probePdfConverter() {
+    try {
+      const res = await fetch('/api/pdf-converter');
+      if (!res.ok) return;
+      const info = await res.json();
+      const lbl = document.getElementById('pdf-availability');
+      const cb = document.getElementById('opt-also-pdf');
+      if (!lbl || !cb) return;
+      if (info.available) {
+        lbl.textContent = ` (via ${info.converter})`;
+      } else {
+        lbl.textContent = ' (no converter — install Word or LibreOffice)';
+        cb.disabled = true;
+        cb.parentElement?.setAttribute('title', info.hint || '');
+      }
+    } catch (_) { /* probe is advisory */ }
+  })();
+
+  // cover letter
+  function showCover(text, warnings) {
+    document.getElementById('cover-text').textContent = text || '(no text returned)';
+    const chips = document.getElementById('cover-summary-chips');
+    if (warnings && warnings.length) {
+      chips.innerHTML = `<span class="chip tone-warn">${warnings.length} guard warning${warnings.length > 1 ? 's' : ''}</span>`;
+    } else {
+      chips.innerHTML = '<span class="chip tone-good">no guard warnings</span>';
+    }
+    const wbody = document.getElementById('cover-warnings-body');
+    wbody.innerHTML = '';
+    if (warnings && warnings.length) {
+      warnings.forEach(w => {
+        const row = document.createElement('div');
+        row.className = 'lint'; row.dataset.rule = 'cover-guard';
+        row.innerHTML = `
+          <div class="rule"><span class="ic">!</span>${escapeHtml(w.paragraph_role || ('p' + w.paragraph_index))}</div>
+          <div class="msg">${escapeHtml(w.reason || '')}
+            ${w.text ? `<div class="snip">${escapeHtml((w.text || '').slice(0, 320))}</div>` : ''}
+          </div>
+          <div class="src">${escapeHtml('p' + w.paragraph_index)}</div>
+        `;
+        wbody.appendChild(row);
+      });
+    }
+  }
+
+  async function downloadCoverDocx(url, fd) {
+    setStatus('Generating cover letter…', 'pending');
+    const t0 = performance.now();
+    const res = await fetch(url, { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || msg; if (j.hint) msg += ' — ' + j.hint; } catch (_) {}
+      setStatus(msg, 'error');
+      return;
+    }
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    const warnHeader = res.headers.get('X-Cover-Warnings');
+    const warnings = warnHeader ? JSON.parse(warnHeader) : [];
+    const textHeader = res.headers.get('X-Cover-Text');
+    const text = textHeader ? textHeader.replaceAll('\\n', '\n') : '';
+    showCover(text, warnings);
+
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cover-letter.docx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+
+    selectTab('cover');
+    setStatus(`Cover letter downloaded${warnings.length ? ` (${warnings.length} warning${warnings.length > 1 ? 's' : ''})` : ''}.`, 'ok');
+    setGenMeta(`cover done · ${elapsed}s`, '');
+
+    // Phase 8: also convert the cover letter to PDF when opted in.
+    if (document.getElementById('opt-also-pdf')?.checked) {
+      await alsoConvertToPdf(blob, 'cover-letter.docx');
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // Button wiring
+  // ----------------------------------------------------------------
+  document.getElementById('btn-generate').addEventListener('click', () => {
+    downloadDocx('/api/generate', formData(), 'resume.docx');
+  });
+  document.getElementById('btn-generate-cover').addEventListener('click', () => {
+    downloadCoverDocx('/api/cover-generate', formData());
+  });
+  document.getElementById('btn-from-response').addEventListener('click', () => {
+    const r = document.getElementById('response_text').value.trim();
+    if (!r) { setStatus("Paste Claude's JSON reply first.", 'error'); return; }
+    downloadDocx('/api/from-response', formData(), 'resume.docx');
+  });
+  document.getElementById('btn-from-cover-response').addEventListener('click', () => {
+    const r = document.getElementById('response_text').value.trim();
+    if (!r) { setStatus("Paste Claude's JSON reply first.", 'error'); return; }
+    downloadCoverDocx('/api/cover-from-response', formData());
+  });
+
+  async function loadPrompt(url, label) {
+    setStatus(`Building ${label}…`, 'pending');
+    const res = await fetch(url, { method: 'POST', body: formData() });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch (_) {}
+      setStatus(msg, 'error'); return;
+    }
+    const text = await res.text();
+    document.getElementById('prompt_out').value = text;
+    document.getElementById('btn-copy-prompt').classList.remove('hidden');
+    setStatus(`${label} ready.`, 'ok');
+  }
+  document.getElementById('btn-show-prompt').addEventListener('click', () => loadPrompt('/api/prompt', 'resume prompt'));
+  document.getElementById('btn-show-cover-prompt').addEventListener('click', () => loadPrompt('/api/cover-prompt', 'cover-letter prompt'));
+
+  document.getElementById('btn-copy-prompt').addEventListener('click', async () => {
+    const ta = document.getElementById('prompt_out');
+    try {
+      await navigator.clipboard.writeText(ta.value);
+      setStatus('Prompt copied to clipboard.', 'ok');
+    } catch (_) {
+      ta.select(); document.execCommand('copy');
+      setStatus('Prompt copied (fallback).', 'ok');
+    }
+  });
+
+  // ⌘↵ / Ctrl+Enter to generate resume
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btn-generate').click();
+    }
+  });
+
+  // ---------------- Phase 10 item 1: format preset picker ----------------
+
+  (async function loadTemplatePresets() {
+    let data;
+    try {
+      const res = await fetch('/api/template-presets');
+      if (!res.ok) return;
+      data = await res.json();
+    } catch (_) { return; }
+
+    const select = document.getElementById('preset-select');
+    const guidance = document.getElementById('preset-guidance');
+    if (!select || !data?.presets) return;
+
+    select.innerHTML = '';
+    const byId = {};
+    data.presets.forEach((p) => {
+      byId[p.id] = p;
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.label;
+      if (p.id === data.default_id) opt.selected = true;
+      select.appendChild(opt);
+    });
+    if (data.custom_exists) ensureCustomPresetOption(false);
+
+    function renderGuidance(id) {
+      const p = byId[id];
+      if (!p || !guidance) { guidance.textContent = ''; return; }
+      const g = p.guidance;
+      guidance.innerHTML =
+        `<strong>${escapeHtml(g.pages)}</strong> · `
+        + `<span>${escapeHtml(g.years_experience)}</span> · `
+        + `<em>${escapeHtml(g.best_for)}</em><br>`
+        + `<span class="hint">${escapeHtml(g.notes)}</span>`;
+    }
+    renderGuidance(select.value);
+    select.addEventListener('change', () => renderGuidance(select.value));
+  })();
+
+  // ---------------- Template customizer (adoption A1) ----------------
+
+  // Adds the "Custom · template.yaml" option to the preset picker (called by
+  // the picker loader when the file exists, and after every save here).
+  function ensureCustomPresetOption(selectIt) {
+    const select = document.getElementById('preset-select');
+    let opt = [...select.options].find(o => o.value === 'custom');
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = 'custom';
+      opt.textContent = 'Custom · template.yaml';
+      select.appendChild(opt);
+    }
+    if (selectIt) select.value = 'custom';
+  }
+
+  (function templateCustomizer() {
+    const SECTION_LABELS = {
+      summary: 'Summary', experience: 'Experience', projects: 'Projects',
+      education: 'Education', skills: 'Skills',
+    };
+    const ALL_SECTIONS = Object.keys(SECTION_LABELS);
+    const panel = document.getElementById('template-customizer');
+    const select = document.getElementById('preset-select');
+    const list = document.getElementById('tc-sections');
+    const seedNote = document.getElementById('tc-seed-note');
+    let seedTpl = null;         // last-fetched full template dict (bold flags etc.)
+    let sections = [];          // [{name, on}] in display order
+
+    function renderSections() {
+      list.innerHTML = '';
+      sections.forEach((s, i) => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = s.on;
+        cb.addEventListener('change', () => { s.on = cb.checked; });
+        const name = document.createElement('span');
+        name.className = 'order-name'; name.textContent = SECTION_LABELS[s.name] || s.name;
+        const up = document.createElement('button');
+        up.type = 'button'; up.textContent = '▲'; up.disabled = i === 0;
+        up.addEventListener('click', () => {
+          [sections[i - 1], sections[i]] = [sections[i], sections[i - 1]]; renderSections();
+        });
+        const down = document.createElement('button');
+        down.type = 'button'; down.textContent = '▼'; down.disabled = i === sections.length - 1;
+        down.addEventListener('click', () => {
+          [sections[i + 1], sections[i]] = [sections[i], sections[i + 1]]; renderSections();
+        });
+        li.append(cb, name, up, down);
+        list.appendChild(li);
+      });
+    }
+
+    async function seedFrom(presetId) {
+      try {
+        const res = await fetch('/api/template-values?preset=' + encodeURIComponent(presetId || 'custom'));
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        seedTpl = data.template;
+      } catch (err) {
+        seedNote.textContent = 'Could not load template values.';
+        return;
+      }
+      const t = seedTpl;
+      document.getElementById('tc-font').value = t.fonts.body.name || 'Calibri';
+      document.getElementById('tc-page-size').value = t.page.size || 'letter';
+      document.getElementById('tc-accent').value = t.colors.accent || '#2E5C8A';
+      document.getElementById('tc-size-body').value = t.fonts.body.size;
+      document.getElementById('tc-size-role').value = t.fonts.role.size;
+      document.getElementById('tc-size-heading').value = t.fonts.heading.size;
+      document.getElementById('tc-size-name').value = t.fonts.name.size;
+      document.getElementById('tc-margin-tb').value = parseFloat(t.page.margin_top) || 0.5;
+      document.getElementById('tc-margin-lr').value = parseFloat(t.page.margin_left) || 0.7;
+      document.getElementById('tc-line').value = t.spacing.line;
+      document.getElementById('tc-para-after').value = t.spacing.paragraph_after;
+      const order = Array.isArray(t.section_order) ? t.section_order : ALL_SECTIONS;
+      sections = order.filter(n => ALL_SECTIONS.includes(n)).map(n => ({ name: n, on: true }));
+      ALL_SECTIONS.filter(n => !order.includes(n)).forEach(n => sections.push({ name: n, on: false }));
+      renderSections();
+      seedNote.textContent = presetId === 'custom'
+        ? 'editing template.yaml' : `starting from “${presetId}”`;
+    }
+
+    panel.addEventListener('toggle', () => {
+      if (panel.open) seedFrom(select.value || 'custom');
+    });
+    select.addEventListener('change', () => {
+      if (panel.open) seedFrom(select.value || 'custom');
+    });
+
+    document.getElementById('btn-save-template').addEventListener('click', async () => {
+      if (!seedTpl) await seedFrom(select.value || 'custom');
+      if (!seedTpl) return;  // fetch failed; note already shown
+      const t = JSON.parse(JSON.stringify(seedTpl));
+      const family = document.getElementById('tc-font').value.trim() || 'Calibri';
+      for (const k of ['body', 'role', 'heading', 'name']) t.fonts[k].name = family;
+      t.fonts.body.size = parseFloat(document.getElementById('tc-size-body').value);
+      t.fonts.role.size = parseFloat(document.getElementById('tc-size-role').value);
+      t.fonts.heading.size = parseFloat(document.getElementById('tc-size-heading').value);
+      t.fonts.name.size = parseFloat(document.getElementById('tc-size-name').value);
+      t.page.size = document.getElementById('tc-page-size').value;
+      const tb = parseFloat(document.getElementById('tc-margin-tb').value);
+      const lr = parseFloat(document.getElementById('tc-margin-lr').value);
+      t.page.margin_top = t.page.margin_bottom = `${tb}in`;
+      t.page.margin_left = t.page.margin_right = `${lr}in`;
+      t.spacing.line = parseFloat(document.getElementById('tc-line').value);
+      t.spacing.paragraph_after = parseFloat(document.getElementById('tc-para-after').value);
+      t.colors.accent = document.getElementById('tc-accent').value;
+      t.section_order = sections.filter(s => s.on).map(s => s.name);
+
+      const btn = document.getElementById('btn-save-template');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/save-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template: t }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+        }
+        ensureCustomPresetOption(true);
+        seedNote.textContent = 'editing template.yaml';
+        const note = document.getElementById('tc-saved-note');
+        note.hidden = false;
+        setTimeout(() => { note.hidden = true; }, 3000);
+      } catch (err) {
+        alert('Could not save template: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---------------- Pointer defaults (pointers.yaml round-trip) ----------------
+
+  (function pointerDefaults() {
+    const saved = {{ pointers_default | default({}) | tojson }};
+    const form = document.getElementById('form');
+
+    // Pre-fill from pointers.yaml. Selects only accept known option values —
+    // an unrecognized saved value (e.g. length: "700") just keeps "(default)".
+    // NB: form.elements['length'] is the collection's length property, not
+    // the <select name="length"> — always go through querySelector here.
+    const pointerSelect = (k) => form.querySelector(`select[name="${k}"]`);
+    for (const k of ['length', 'seniority', 'context']) {
+      const v = saved[k];
+      const el = pointerSelect(k);
+      if (!v || !el) continue;
+      if ([...el.options].some(o => o.value === String(v))) el.value = String(v);
+    }
+    if (saved.extra_instructions) {
+      document.getElementById('extra_instructions').value = saved.extra_instructions;
+    }
+    if (Array.isArray(saved.must_include) && saved.must_include.length) {
+      addToken(saved.must_include.join(','));
+    }
+
+    // Save current Pointers-card values back to pointers.yaml.
+    const btn = document.getElementById('btn-save-defaults');
+    const note = document.getElementById('defaults-saved-note');
+    btn.addEventListener('click', async () => {
+      if (tokenInput.value.trim()) { addToken(tokenInput.value); tokenInput.value = ''; }
+      const fd = new FormData();
+      for (const k of ['length', 'seniority', 'context']) fd.set(k, pointerSelect(k).value || '');
+      fd.set('must_include', mustInclude.value || '');
+      fd.set('extra_instructions', document.getElementById('extra_instructions').value || '');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/save-defaults', { method: 'POST', body: fd });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+        }
+        note.hidden = false;
+        setTimeout(() => { note.hidden = true; }, 2500);
+      } catch (err) {
+        alert('Could not save defaults: ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  })();
+
+  // ---------------- Phase 9: privacy banner + delete-my-data ----------------
+
+  const PRIVACY_ACK_KEY = 'rb.privacyBannerDismissed';
+  (function showPrivacyBannerOnce() {
+    try {
+      if (localStorage.getItem(PRIVACY_ACK_KEY) === '1') return;
+    } catch (_) { /* localStorage unavailable — show banner anyway */ }
+    const banner = document.getElementById('privacy-banner');
+    if (!banner) return;
+    banner.hidden = false;
+    document.getElementById('privacy-banner-dismiss')?.addEventListener('click', () => {
+      banner.hidden = true;
+      try { localStorage.setItem(PRIVACY_ACK_KEY, '1'); } catch (_) {}
+    });
+  })();
+
+  async function deleteMyData() {
+    const proceed = confirm(
+      "This permanently wipes:\n" +
+      "  • sessions/ (every wizard session)\n" +
+      "  • master.yaml.bak.* (every backup of master.yaml)\n" +
+      "  • drafts/ (if it exists)\n\n" +
+      "Your current master.yaml is NOT touched. Continue?"
+    );
+    if (!proceed) return;
+    setStatus('Deleting local data…', 'pending');
+    try {
+      const res = await fetch('/api/delete-my-data', { method: 'POST' });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setStatus(j.error || `HTTP ${res.status}`, 'error');
+        return;
+      }
+      const body = await res.json();
+      const removed = (body.removed_paths || []).length;
+      setStatus(`Deleted ${removed} item${removed === 1 ? '' : 's'}.`, 'ok');
+    } catch (err) {
+      setStatus(`Delete failed: ${err.message}`, 'error');
+    }
+  }
+  document.getElementById('btn-delete-my-data')?.addEventListener('click', deleteMyData);
+</script>
+
+<!-- Phase 9 — persistent privacy footer -->
+<footer class="privacy-footer">
+  <span class="privacy-line">
+    <span class="dot-green" aria-hidden="true"></span>
+    Your data stays on this machine. Prompts are sent to Anthropic only when you click Generate.
+  </span>
+  <button type="button" id="btn-delete-my-data" class="link-button"
+          title="Wipe sessions/, master.yaml.bak.*, and drafts/. Your current master.yaml stays.">
+    Delete my data
+  </button>
+</footer>
+
+</body>
+</html>

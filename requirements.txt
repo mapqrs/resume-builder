@@ -1,0 +1,13 @@
+python-docx>=1.1.0
+pydantic>=2.5.0
+PyYAML>=6.0
+pytest>=7.4.0
+python-dotenv>=1.0.0
+flask>=3.0.0
+pypdf>=4.0.0
+# Optional — enables the ANTHROPIC_API_KEY path in llm.AnthropicAPIProvider.
+# Tool still works without it (claude-p subprocess + copy-paste fallback).
+anthropic>=0.40.0
+# Optional — enables the typo-suspect lint (Bock Part 02 "58% of resumes have typos").
+# Lint becomes a no-op if missing; everything else works.
+pyspellchecker>=0.7.0
