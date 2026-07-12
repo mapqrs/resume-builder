@@ -26,6 +26,53 @@
     </div>
     {% endif %}
 
+    <!-- Your sessions gallery (rendered by JS; hidden when there's nothing to show) -->
+    <details id="sessions-gallery" hidden>
+      <summary>Your sessions — <span id="sessions-count"></span></summary>
+      <div id="sessions-list" class="sessions-list"></div>
+    </details>
+
+    <!-- Fast-track: import an existing résumé (the front door) -->
+    <fieldset id="import-hero">
+      <legend>0. Already have a résumé? Import it</legend>
+      <p class="hint">
+        Upload it (PDF / DOCX / MD / TXT) or paste the text. We pre-fill your
+        basics, education, skills, and one career chunk per job — seeded with
+        your own bullets — so the steps below become a <strong>review</strong>,
+        not a cold start. Nothing is saved to your master until you say so.
+      </p>
+      <div class="row import-actions">
+        <label class="file-button">
+          &#128196; Upload r&eacute;sum&eacute;
+          <input type="file" id="import_hero_file"
+                 accept=".pdf,.docx,.md,.markdown,.txt,.text" hidden>
+        </label>
+        <button type="button" id="btn-import-paste-toggle">&hellip;or paste the text</button>
+      </div>
+      <div id="import-paste-wrap" hidden>
+        <textarea id="import_paste_text" rows="7"
+          placeholder="Paste your entire r&eacute;sum&eacute; text here (or your LinkedIn profile)&hellip;"></textarea>
+        <button type="button" id="btn-import-run">Import &amp; pre-fill &rarr;</button>
+      </div>
+      <div id="import-result" hidden></div>
+      <!-- copy-paste fallback when no AI connection is available -->
+      <div id="import-copypaste" hidden>
+        <p class="hint">
+          <strong>Copy-paste mode.</strong> Copy this prompt into any Claude
+          session, then paste the JSON reply below.
+        </p>
+        <textarea id="import_cp_prompt" rows="4" readonly></textarea>
+        <div class="row">
+          <button type="button" id="btn-import-cp-copy">Copy prompt</button>
+        </div>
+        <textarea id="import_cp_reply" rows="4"
+          placeholder='Paste Claude&#39;s JSON reply here&hellip;'></textarea>
+        <div class="row">
+          <button type="button" id="btn-import-cp-apply">Apply reply</button>
+        </div>
+      </div>
+    </fieldset>
+
     <div class="sample-cta">
       <div class="sample-cta-text">
         <strong>Just want to see how it works?</strong>
@@ -130,13 +177,14 @@
 
       <div class="row">
         <label class="file-button">
-          Or import an old resume / paste LinkedIn&hellip;
+          Append a file into this chunk&hellip;
           <input type="file" id="import_file"
                  accept=".pdf,.docx,.md,.markdown,.txt,.text" hidden>
         </label>
         <span class="hint inline">
-          PDF / DOCX / MD / TXT extracted into the current chunk's notes.
-          You can also paste your LinkedIn profile text directly.
+          Extracts PDF / DOCX / MD / TXT into the current chunk's notes
+          (for extra material like old appraisals). To import your whole
+          r&eacute;sum&eacute;, use step 0 at the top instead.
         </span>
       </div>
     </fieldset>

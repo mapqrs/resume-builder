@@ -108,42 +108,54 @@ tolerance, and launches. Double-clicking it in Explorer works.
 
 Files: `run-web.bat`, `README.md` (quick start now covers Windows natively).
 
+### 9. Résumé import as the wizard's front door
+*Shipped 2026-07-12.*
+
+The wizard's default path was a ~30-minute cold brain-dump even for people who
+already had a résumé. Now **step 0** at the top of the wizard takes an upload
+(PDF/DOCX/MD/TXT) or pasted text, makes one LLM parse call, and pre-fills the
+whole session: one career chunk **per job** (labelled "Company — Role", seeded
+with the résumé's own bullets as raw notes), employment metadata, basics,
+education, summary, and one skills-bucket draft per skill. Every step below
+becomes a review pass; the normal Extract → categorize → polish pipeline (and
+the no-invention guard) is unchanged.
+
+Details: parser prompt is transcribe-only (no embellishment; unparseable dates
+become warnings, never guesses); warn-then-replace when the session already has
+typed content (409 + force, same pattern as chunk extract); full copy-paste
+fallback when no AI connection is available — unlike the older extract flow,
+import works end-to-end without a key. The old per-chunk file import remains as
+"append a file into this chunk".
+
+Files: `src/resume_builder/resume_import.py` (new), `wizard.py`
+(`/import-apply`, `/import-apply-response`), `templates/wizard.html`,
+`static/wizard.js`, `static/wizard.css`, `tests/test_resume_import.py`.
+
+### 10. Sessions gallery
+*Shipped 2026-07-12.*
+
+Closing the tab used to mean losing your `/wizard?session=<id>` URL — and with
+it your work (`HANDOFF.md` §9 gap). The wizard now shows a collapsible **"Your
+sessions"** bar listing every session newest-first with a human label (basics
+name → newest employment → role family → id), relative last-edited time,
+progress (chunks dumped / drafts / saved-to-master), plus **Continue** and
+**Delete** (with confirm). Backed by `GET /api/wizard/sessions` and
+`DELETE /api/wizard/<id>`.
+
+Files: `wizard.py` (routes), `templates/wizard.html`, `static/wizard.js`,
+`static/wizard.css`, `tests/test_resume_import.py` (gallery tests).
+
 ---
 
 ## 🎯 High impact, next up
 
-### 2. Make "import an existing résumé" the front door
-**Impact: high · Effort: medium**
+### Applications tracker (sessions gallery, phase 2)
+**Impact: medium-high · Effort: medium**
 
-Most people already have a résumé, but the wizard's default path is a ~30-minute
-cold brain-dump. The import endpoint already exists (`wizard.py`
-`/api/wizard/<id>/import-resume`, surfaced as a small "Or import an old resume /
-paste LinkedIn…" link at `wizard.html:118`) but it only seeds a single chunk's
-text.
-
-Change: promote import to the hero action at the top of the wizard, and make it
-do more — extract → auto-distribute across chunks and pre-fill Basics /
-Education / Skills where confidently parseable, then drop the user into a
-*review* flow instead of a blank brain-dump. "Upload your résumé → we pre-fill
-everything → you confirm" is the single biggest cold-start win.
-
-Files: `wizard.html`, `wizard.py` (import-resume), `bootstrap.py` (extraction →
-draft distribution), `promote.py`.
-
-### 3. "My sessions / applications" view
-**Impact: high · Effort: medium**
-
-Acknowledged gap (`HANDOFF.md` §9): there's no list of past wizard sessions.
-Close the tab and the `/wizard?session=<id>` URL is gone — and with it your work.
-
-Change: a simple gallery (home or `/wizard`) listing `sessions/` with a label,
-last-edited time, and resume/continue/delete. Then extend it into a job-search
-companion: each generated résumé with its JD, ATS score, and date, so the tool
-becomes something people return to per application instead of a one-shot
-generator.
-
-Files: new route in `web.py`, `session_store.py`, `index.html` (or a new
-template), `sessions/`.
+Extend the sessions gallery into a job-search companion: each generated résumé
+with its JD, ATS score, and date, so the tool becomes something people return
+to per application instead of a one-shot generator. Files: `web.py` (record
+generations), a small on-disk index next to `out/`, `index.html`.
 
 ---
 

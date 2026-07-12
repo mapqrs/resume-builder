@@ -36,6 +36,7 @@ from . import (
     role_families,
     session_store,
 )
+from . import resume_import
 from .file_extract import ExtractError, extract_text
 from .llm import CopyPasteRequired, LLMError, pick_provider, provider_status
 from .schema import Basics, Education
@@ -47,6 +48,8 @@ from .session_store import (
     DraftAccomplishment,
     TimeChunk,
     default_chunks_for,
+    delete_session,
+    list_sessions,
     load,
     new_session,
     save,
@@ -134,6 +137,52 @@ def create_session():
     s = new_session()
     _save(s)
     return jsonify(_session_payload(s)), 201
+
+
+@wizard_bp.route("/api/wizard/sessions", methods=["GET"])
+def sessions_index():
+    """List all wizard sessions, newest first, for the "your sessions" gallery.
+
+    Each entry carries just enough to render a card: a human label (basics
+    name → newest employment → role family → id), timestamps, and progress
+    counts. Static path segment wins over the ``<session_id>`` converter,
+    so this never shadows a real session id.
+    """
+    root = _sessions_root()
+    entries: list[dict[str, Any]] = []
+    for sid in list_sessions(sessions_root=root):
+        try:
+            s = load(sid, sessions_root=root)
+        except Exception:
+            continue  # unreadable state file — skip, never break the gallery
+        if s.basics and s.basics.name.strip():
+            label = s.basics.name.strip()
+        elif s.employment:
+            newest = s.employment[-1]
+            label = " — ".join(x for x in (newest.company, newest.role) if x) or sid
+        elif s.role_family:
+            label = (s.role_family_other or s.role_family).replace("-", " ").title()
+        else:
+            label = f"Session {sid[:6]}"
+        entries.append({
+            "id": s.id,
+            "label": label,
+            "created_at": s.created_at,
+            "updated_at": s.updated_at,
+            "chunks": len(s.chunks),
+            "dumped_chunks": sum(1 for c in s.chunks if (c.raw_notes or "").strip()),
+            "drafts": len(s.drafts),
+            "promoted": bool(s.promoted_master_path),
+        })
+    return jsonify({"sessions": entries})
+
+
+@wizard_bp.route("/api/wizard/<session_id>", methods=["DELETE"])
+def delete_session_route(session_id: str):
+    """Delete one wizard session directory. 404 when it doesn't exist."""
+    if not delete_session(session_id, sessions_root=_sessions_root()):
+        abort(404, description=f"session {session_id} not found")
+    return jsonify({"ok": True, "deleted": session_id})
 
 
 @wizard_bp.route("/api/wizard/<session_id>", methods=["GET"])
@@ -694,6 +743,148 @@ def import_resume(session_id: str):
         "kind": kind,
         "text": text,
         "chars": len(text),
+    })
+
+
+@wizard_bp.route(
+    "/api/wizard/<session_id>/import-apply", methods=["POST"],
+)
+def import_apply(session_id: str):
+    """Parse an existing resume and pre-fill the whole session from it.
+
+    Accepts either a multipart ``file`` (PDF/DOCX/MD/TXT, extracted via
+    ``file_extract``) or JSON ``{"text": "..."}``. One LLM call parses the
+    text into basics / employment / education / skills; ``apply_import``
+    maps that onto the session (one chunk per job, seeded with the resume's
+    own bullets). The user then reviews each wizard step as usual.
+
+    Guards:
+      - 422 when the text is too short to plausibly be a resume.
+      - 409 when the session already has typed content and ``force`` isn't
+        set (warn-then-replace, same pattern as chunk extract).
+
+    Copy-paste path: when no automated provider is available, returns 200
+    with ``copy_paste_required`` + the exact prompts; the client then POSTs
+    Claude's reply to ``import-apply-response``.
+    """
+    s = _load(session_id)
+
+    f = request.files.get("file")
+    if f is not None and f.filename:
+        try:
+            text, _kind = extract_text(f.filename, f.read())
+        except ExtractError as e:
+            return jsonify({"error": str(e)}), 415
+        force = request.form.get("force") in ("1", "true", "yes")
+    else:
+        payload = request.get_json(silent=True) or {}
+        text = payload.get("text") or ""
+        force = bool(payload.get("force"))
+
+    text = text.strip()
+    if len(text) < resume_import.MIN_IMPORT_CHARS:
+        return (
+            jsonify({
+                "error": "text_too_short",
+                "min_chars": resume_import.MIN_IMPORT_CHARS,
+                "current_chars": len(text),
+                "hint": (
+                    "That doesn't look like a full resume. Paste the whole "
+                    "thing, or upload the PDF/DOCX."
+                ),
+            }),
+            422,
+        )
+
+    if resume_import.session_has_content(s) and not force:
+        return (
+            jsonify({
+                "error": "session_has_content",
+                "hint": (
+                    "This session already has typed notes, drafts, education, "
+                    "or basics. Re-send with {'force': true} to replace them "
+                    "with the imported resume."
+                ),
+            }),
+            409,
+        )
+
+    try:
+        choice = pick_provider()
+    except LLMError as e:  # pragma: no cover — pick_provider always returns
+        abort(500, description=str(e))
+
+    user_msg = resume_import.build_import_user_message(text)
+    try:
+        raw = choice.provider.complete(
+            resume_import.IMPORT_SYSTEM_PROMPT, user_msg,
+        )
+    except CopyPasteRequired:
+        return jsonify({
+            "copy_paste_required": True,
+            "system_prompt": resume_import.IMPORT_SYSTEM_PROMPT,
+            "user_message": user_msg,
+            "hint": (
+                "No automated AI access. Paste the prompt into any Claude "
+                "session, then paste the JSON reply back into the wizard."
+            ),
+        })
+    except LLMError as e:
+        return jsonify({"error": "llm_failed", "detail": str(e)}), 502
+
+    try:
+        parsed = resume_import.parse_import_response(raw)
+    except resume_import.ImportParseError as e:
+        return jsonify({"error": "parse_failed", "detail": str(e)}), 502
+
+    summary = resume_import.apply_import(s, parsed)
+    _save(s)
+    return jsonify({
+        "session": _session_payload(s),
+        "summary": summary.model_dump(mode="json"),
+        "provider": {"name": choice.provider.name, "reason": choice.reason},
+        "llm_call": {
+            "system_prompt": resume_import.IMPORT_SYSTEM_PROMPT,
+            "user_message": user_msg,
+            "raw_response": raw,
+        },
+    })
+
+
+@wizard_bp.route(
+    "/api/wizard/<session_id>/import-apply-response", methods=["POST"],
+)
+def import_apply_response(session_id: str):
+    """Copy-paste completion of the import flow.
+
+    Body: ``{"response_text": "<Claude's JSON reply>", "force": bool}``.
+    Parses and applies exactly like the automated path.
+    """
+    s = _load(session_id)
+    payload = request.get_json(silent=True) or {}
+    raw = (payload.get("response_text") or "").strip()
+    if not raw:
+        abort(400, description="response_text is required")
+
+    if resume_import.session_has_content(s) and not bool(payload.get("force")):
+        return (
+            jsonify({
+                "error": "session_has_content",
+                "hint": "Re-send with {'force': true} to replace existing content.",
+            }),
+            409,
+        )
+
+    try:
+        parsed = resume_import.parse_import_response(raw)
+    except resume_import.ImportParseError as e:
+        return jsonify({"error": "parse_failed", "detail": str(e)}), 400
+
+    summary = resume_import.apply_import(s, parsed)
+    _save(s)
+    return jsonify({
+        "session": _session_payload(s),
+        "summary": summary.model_dump(mode="json"),
     })
 
 

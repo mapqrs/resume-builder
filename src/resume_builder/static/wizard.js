@@ -1387,6 +1387,213 @@ async function importFile(file) {
   }
 }
 
+// ---------- Résumé import (step 0 — the front door) ----------
+
+async function importApply({ file = null, text = null, force = false } = {}) {
+  status("Importing résumé…", "saving");
+  try {
+    let res;
+    if (file) {
+      const fd = new FormData();
+      fd.append("file", file);
+      if (force) fd.append("force", "1");
+      res = await fetch(`/api/wizard/${state.session.id}/import-apply`, {
+        method: "POST",
+        body: fd,
+      });
+    } else {
+      res = await fetch(`/api/wizard/${state.session.id}/import-apply`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text, force }),
+      });
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      const replace = confirm(
+        "This session already has notes, drafts, or basics. " +
+        "Replace them with the imported résumé?",
+      );
+      if (replace) return importApply({ file, text, force: true });
+      status(null);
+      return;
+    }
+    if (!res.ok) {
+      throw new Error(data.hint || data.detail || data.error || res.statusText);
+    }
+    if (data.copy_paste_required) {
+      showImportCopyPaste(data);
+      status(null);
+      return;
+    }
+    finishImport(data);
+  } catch (err) {
+    status(`Import failed: ${err.message}`, "error");
+  }
+}
+
+function finishImport(data) {
+  state.session = data.session;
+  state.session.education = (state.session.education || []).map(ensureEducationDefaults);
+  state.session.basics = ensureBasicsDefaults(state.session.basics);
+  state.session.employment = state.session.employment || [];
+  if (state.session.chunks.length) {
+    state.activeChunkId = state.session.chunks[0].id;
+  }
+  renderAll();
+
+  const s = data.summary || {};
+  const bits = [];
+  if (s.employment_chunks) {
+    bits.push(`${s.employment_chunks} job${s.employment_chunks === 1 ? "" : "s"} → career chunks`);
+  }
+  if (s.education_entries) bits.push(`${s.education_entries} education`);
+  if (s.skills) bits.push(`${s.skills} skills`);
+  if (s.basics_filled) bits.push("basics");
+  if (s.summary_filled) bits.push("summary");
+
+  const el = $("#import-result");
+  el.hidden = false;
+  el.className = "import-result ok";
+  el.innerHTML =
+    `<strong>Imported:</strong> ${bits.map(escapeHtml).join(" · ") || "nothing recognized"}.` +
+    ((s.warnings || []).length
+      ? `<div class="import-warnings">${s.warnings.map((w) => `&#9888; ${escapeHtml(w)}`).join("<br>")}</div>`
+      : "") +
+    `<div class="import-next">Everything below is now a review pass: confirm your ` +
+    `role family (step 1), then run <strong>Extract</strong> on each pre-seeded chunk (step 3).</div>`;
+  $("#import-copypaste").hidden = true;
+  status("Résumé imported", "saved");
+  setTimeout(() => status(null), 2500);
+}
+
+function showImportCopyPaste(data) {
+  const wrap = $("#import-copypaste");
+  wrap.hidden = false;
+  $("#import_cp_prompt").value =
+    `# === SYSTEM ===\n${data.system_prompt}\n\n# === USER MESSAGE ===\n${data.user_message}\n`;
+}
+
+async function importApplyResponse() {
+  const raw = $("#import_cp_reply").value.trim();
+  if (!raw) {
+    status("Paste Claude's JSON reply first.", "error");
+    return;
+  }
+  status("Applying reply…", "saving");
+  try {
+    let res = await fetch(`/api/wizard/${state.session.id}/import-apply-response`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ response_text: raw }),
+    });
+    let data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      const replace = confirm(
+        "This session already has content. Replace it with the imported résumé?",
+      );
+      if (!replace) { status(null); return; }
+      res = await fetch(`/api/wizard/${state.session.id}/import-apply-response`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ response_text: raw, force: true }),
+      });
+      data = await res.json().catch(() => ({}));
+    }
+    if (!res.ok) {
+      throw new Error(data.hint || data.detail || data.error || res.statusText);
+    }
+    finishImport(data);
+  } catch (err) {
+    status(`Apply failed: ${err.message}`, "error");
+  }
+}
+
+// ---------- sessions gallery ----------
+
+function relativeTime(iso) {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return iso;
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
+
+async function loadSessionsGallery() {
+  let data;
+  try {
+    data = await api("/api/wizard/sessions");
+  } catch (_) {
+    return; // gallery is a nicety — never block the wizard on it
+  }
+  const sessions = data.sessions || [];
+  const others = sessions.filter((s) => s.id !== state.session.id);
+  const gallery = $("#sessions-gallery");
+  if (!others.length) {
+    gallery.hidden = true;
+    return;
+  }
+  gallery.hidden = false;
+  $("#sessions-count").textContent =
+    `${others.length} other${others.length === 1 ? "" : "s"}`;
+
+  const list = $("#sessions-list");
+  list.innerHTML = "";
+  sessions.forEach((s) => {
+    const row = document.createElement("div");
+    row.className = "session-row" + (s.id === state.session.id ? " current" : "");
+    const progress = s.promoted
+      ? "saved to master ✓"
+      : `${s.dumped_chunks}/${s.chunks} chunks dumped · ${s.drafts} drafts`;
+    row.innerHTML =
+      `<span class="session-label">${escapeHtml(s.label)}</span>` +
+      `<span class="session-meta">${escapeHtml(relativeTime(s.updated_at))} · ${escapeHtml(progress)}</span>`;
+
+    const actions = document.createElement("span");
+    actions.className = "session-actions";
+    if (s.id === state.session.id) {
+      const chip = document.createElement("span");
+      chip.className = "session-chip";
+      chip.textContent = "current";
+      actions.appendChild(chip);
+    } else {
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.textContent = "Continue →";
+      openBtn.addEventListener("click", () => {
+        window.location.href = `/wizard?session=${encodeURIComponent(s.id)}`;
+      });
+      actions.appendChild(openBtn);
+    }
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "session-delete";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", async () => {
+      if (!confirm(`Delete session "${s.label}"? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`/api/wizard/${s.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+        if (s.id === state.session.id) {
+          // Deleted the session we're in — start fresh.
+          window.location.href = "/wizard";
+          return;
+        }
+        loadSessionsGallery();
+      } catch (err) {
+        status(`Delete failed: ${err.message}`, "error");
+      }
+    });
+    actions.appendChild(delBtn);
+    row.appendChild(actions);
+    list.appendChild(row);
+  });
+}
+
 // ---------- wiring ----------
 
 function navigateChunk(direction) {
@@ -1449,6 +1656,37 @@ function wireEventHandlers() {
     if (file) importFile(file);
     e.target.value = "";
   });
+
+  // Step 0 — résumé import front door.
+  $("#import_hero_file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) importApply({ file });
+    e.target.value = "";
+  });
+  $("#btn-import-paste-toggle").addEventListener("click", () => {
+    const wrap = $("#import-paste-wrap");
+    wrap.hidden = !wrap.hidden;
+    if (!wrap.hidden) $("#import_paste_text").focus();
+  });
+  $("#btn-import-run").addEventListener("click", () => {
+    const text = $("#import_paste_text").value.trim();
+    if (text.length < 200) {
+      status("That looks too short to be a résumé — paste the whole thing.", "error");
+      return;
+    }
+    importApply({ text });
+  });
+  $("#btn-import-cp-copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($("#import_cp_prompt").value);
+      status("Prompt copied", "saved");
+      setTimeout(() => status(null), 1200);
+    } catch (_) {
+      $("#import_cp_prompt").select();
+      document.execCommand("copy");
+    }
+  });
+  $("#btn-import-cp-apply").addEventListener("click", importApplyResponse);
 
   // Save on tab/visibility change so no edits are lost.
   document.addEventListener("visibilitychange", () => {
@@ -2122,6 +2360,7 @@ function downloadLinkedInMd() {
   wireEventHandlers();
   renderAll();
   initVoice();
+  loadSessionsGallery();
 
   $("#btn-preview-master")?.addEventListener("click", previewMaster);
   $("#btn-save-master")?.addEventListener("click", saveMaster);

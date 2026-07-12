@@ -817,3 +817,77 @@ fieldset[disabled] {
   background: var(--bg);
 }
 .linkedin-edu-item p { margin: 2px 0; }
+
+/* ---------- Step 0: résumé import front door ---------- */
+/* Our display rules below would defeat the `hidden` attribute (author
+   `display` beats the UA's hidden→display:none), so restore it explicitly. */
+#import-paste-wrap[hidden],
+#import-copypaste[hidden],
+#import-result[hidden],
+#sessions-gallery[hidden] { display: none !important; }
+
+#import-hero { border-color: var(--accent); }
+#import-hero legend { color: var(--accent); font-weight: 600; }
+.import-actions { gap: 10px; align-items: center; }
+#import-paste-wrap {
+  margin-top: 10px;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+}
+#import_paste_text, #import_cp_prompt, #import_cp_reply {
+  width: 100%; box-sizing: border-box;
+  font-size: 13px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.import-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+}
+.import-result.ok { background: #e6f4ea; border-color: #b5dfc2; color: #1f5131; }
+.import-warnings { margin-top: 6px; color: #8a6d1f; }
+.import-next { margin-top: 6px; }
+#import-copypaste {
+  margin-top: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border); border-radius: 6px;
+}
+
+/* ---------- Sessions gallery ---------- */
+#sessions-gallery {
+  margin-bottom: 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg);
+}
+#sessions-gallery > summary {
+  padding: 9px 12px;
+  font-size: 13px; color: var(--muted);
+  cursor: pointer; user-select: none;
+}
+#sessions-gallery[open] > summary { border-bottom: 1px solid var(--border); color: var(--fg); }
+.sessions-list { display: flex; flex-direction: column; }
+.session-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.session-row:last-child { border-bottom: none; }
+.session-row.current { background: #f4f8ff; }
+.session-label { font-weight: 600; }
+.session-meta { color: var(--muted); flex: 1; }
+.session-actions { display: flex; gap: 8px; align-items: center; }
+.session-actions button {
+  font-size: 12px; padding: 3px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: white; cursor: pointer;
+}
+.session-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.session-actions button.session-delete:hover { border-color: #b3261e; color: #b3261e; }
+.session-chip {
+  font-size: 11px; padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent); color: white;
+}

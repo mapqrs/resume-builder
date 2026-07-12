@@ -30,7 +30,9 @@ on every output and drops anything the source doesn't support.
 
 - **Wizard** that walks you through a guided brain-dump of every job, project,
   degree, and award. Captures raw memories first, then turns them into
-  Bock-format bullets you approve one at a time.
+  Bock-format bullets you approve one at a time. **Already have a résumé?**
+  Import it (upload or paste) and the wizard pre-fills your basics, education,
+  skills, and one career chunk per job — the whole flow becomes a review pass.
 - **Tailor** that adapts your master resume to a specific JD (or a "target
   role" if you don't have a JD yet) and outputs a Word `.docx` or PDF.
 - **Cover-letter writer** that mirrors the same anti-fabrication rules.
@@ -66,11 +68,17 @@ exactly how to install it.
 > `pip install -r requirements.txt`, then `./run-web.sh`.
 
 The first time you run it (no `master.yaml` in the folder yet), it'll
-drop you straight into the **wizard** at `/wizard`. Follow the 10 steps
-top-to-bottom — pick your role family, brain-dump each chunk of your
-career, watch the AI turn dumps into Bock bullets, categorize them,
-polish the rough ones, fill in education and basics, click **Save
-master**. About 30 minutes from cold start to a working `master.yaml`.
+drop you straight into the **wizard** at `/wizard`. If you already have a
+résumé, **step 0 imports it** — upload the PDF/DOCX or paste the text, and
+the wizard pre-fills everything so the steps below are just review. Starting
+from scratch instead? Follow the 10 steps top-to-bottom — pick your role
+family, brain-dump each chunk of your career, watch the AI turn dumps into
+Bock bullets, categorize them, polish the rough ones, fill in education and
+basics, click **Save master**. About 30 minutes from cold start (or ~10 with
+an imported résumé) to a working `master.yaml`.
+
+Your wizard sessions are listed in a **"Your sessions"** bar at the top of
+the wizard — close the tab anytime and pick up where you left off.
 
 After that, the home page (`/`) loads with your master pre-filled. Paste
 a JD, pick length + seniority, click **Generate resume**. You get back a
