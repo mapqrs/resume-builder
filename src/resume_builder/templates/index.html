@@ -555,12 +555,21 @@
           <div class="card-body">
             <p class="hint" style="margin-top: 0;">
               Every résumé you generate is logged here — the JD, its ATS score,
-              and when. Metadata only; nothing leaves your machine. Cleared by
+              and when. Set a status to track where each application stands.
+              Metadata only; nothing leaves your machine. Cleared by
               <em>Delete my data</em>.
             </p>
+            <div class="history-toolbar" id="history-toolbar" hidden>
+              <div class="history-filters" id="history-filters"></div>
+              <input type="search" id="history-search" class="history-search"
+                     placeholder="Search label or JD…" autocomplete="off">
+            </div>
             <div id="history-empty" class="hint" style="padding: 18px 0;">
               No résumés generated yet. Paste a JD on the left and click
               <strong>Generate resume</strong>.
+            </div>
+            <div id="history-none" class="hint" style="padding: 14px 0;" hidden>
+              No applications match this filter.
             </div>
             <div id="history-list" class="history-list"></div>
           </div>
@@ -1638,56 +1647,137 @@
     if (score >= 0.6) return 'tone-warn';
     return 'tone-bad';
   }
+  const HISTORY_STATUSES = ['saved', 'applied', 'interviewing', 'offer', 'rejected'];
+  const historyState = { items: [], filter: 'all', query: '' };
+
   async function loadApplications() {
-    let list = [];
     try {
       const res = await fetch('/api/applications');
-      if (res.ok) list = (await res.json()).applications || [];
+      historyState.items = res.ok ? ((await res.json()).applications || []) : [];
     } catch (_) { return; }
+    renderHistory();
+  }
+
+  function historyMatches(a) {
+    if (historyState.filter !== 'all' && (a.status || 'saved') !== historyState.filter) return false;
+    const q = historyState.query.trim().toLowerCase();
+    if (q && !((a.label || '') + ' ' + (a.jd_snippet || '')).toLowerCase().includes(q)) return false;
+    return true;
+  }
+
+  function renderHistory() {
+    const items = historyState.items;
     const badge = document.getElementById('history-badge-tab');
     const empty = document.getElementById('history-empty');
+    const none = document.getElementById('history-none');
     const note = document.getElementById('history-count-note');
+    const toolbar = document.getElementById('history-toolbar');
     const wrap = document.getElementById('history-list');
     if (!wrap) return;
-    badge.textContent = list.length;
-    badge.classList.toggle('hidden', list.length === 0);
-    empty.classList.toggle('hidden', list.length > 0);
-    note.textContent = list.length ? `${list.length} generation${list.length === 1 ? '' : 's'}` : '';
+
+    badge.textContent = items.length;
+    badge.classList.toggle('hidden', items.length === 0);
+    empty.classList.toggle('hidden', items.length > 0);
+    toolbar.hidden = items.length === 0;
+    note.textContent = items.length ? `${items.length} generation${items.length === 1 ? '' : 's'}` : '';
+
+    // Filter chips: All + any status that occurs, with counts.
+    const counts = {};
+    items.forEach((a) => { const s = a.status || 'saved'; counts[s] = (counts[s] || 0) + 1; });
+    const filters = document.getElementById('history-filters');
+    filters.innerHTML = '';
+    const addChip = (key, label, n) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'history-filter' + (historyState.filter === key ? ' on' : '');
+      b.textContent = `${label} ${n}`;
+      b.addEventListener('click', () => { historyState.filter = key; renderHistory(); });
+      filters.appendChild(b);
+    };
+    addChip('all', 'All', items.length);
+    HISTORY_STATUSES.forEach((s) => { if (counts[s]) addChip(s, s[0].toUpperCase() + s.slice(1), counts[s]); });
+
+    const shown = items.filter(historyMatches);
+    none.hidden = !(items.length > 0 && shown.length === 0);
     wrap.innerHTML = '';
-    list.forEach((a) => {
-      const row = document.createElement('div');
-      row.className = 'history-row';
-      const pct = a.ats_score == null ? null : Math.round(a.ats_score * 100);
-      const chips = [];
-      if (pct != null) chips.push(`<span class="chip ${atsToneClass(a.ats_score)}">ATS ${pct}% · ${a.ats_matched}/${a.ats_total}</span>`);
-      if (a.length) chips.push(`<span class="chip">${escapeHtml(a.length)}</span>`);
-      if (a.seniority) chips.push(`<span class="chip">${escapeHtml(a.seniority)}</span>`);
-      if (a.from_target_role) chips.push(`<span class="chip">target role</span>`);
-      if (a.guard_dropped) chips.push(`<span class="chip tone-warn">${a.guard_dropped} dropped by guard</span>`);
-      const meta = escapeHtml(appWhen(a.created_at)) +
-        (a.jd_snippet ? ' · ' + escapeHtml(a.jd_snippet.slice(0, 90)) : '');
-      row.innerHTML =
-        `<div class="history-main">` +
-          `<div class="history-label">${escapeHtml(a.label)}</div>` +
-          `<div class="history-meta">${meta}</div>` +
-          `<div class="history-chips">${chips.join('')}</div>` +
-        `</div>`;
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'history-delete';
-      del.title = 'Remove from history';
-      del.setAttribute('aria-label', 'Remove from history');
-      del.textContent = '×';
-      del.addEventListener('click', async () => {
-        try {
-          const r = await fetch('/api/applications/' + encodeURIComponent(a.id), { method: 'DELETE' });
-          if (r.ok) loadApplications();
-        } catch (_) { /* ignore */ }
-      });
-      row.appendChild(del);
-      wrap.appendChild(row);
-    });
+    shown.forEach((a) => wrap.appendChild(renderHistoryRow(a)));
   }
+
+  function renderHistoryRow(a) {
+    const row = document.createElement('div');
+    row.className = 'history-row status-' + (a.status || 'saved');
+    const pct = a.ats_score == null ? null : Math.round(a.ats_score * 100);
+    const chips = [];
+    if (pct != null) chips.push(`<span class="chip ${atsToneClass(a.ats_score)}">ATS ${pct}% · ${a.ats_matched}/${a.ats_total}</span>`);
+    if (a.length) chips.push(`<span class="chip">${escapeHtml(a.length)}</span>`);
+    if (a.seniority) chips.push(`<span class="chip">${escapeHtml(a.seniority)}</span>`);
+    if (a.from_target_role) chips.push(`<span class="chip">target role</span>`);
+    if (a.guard_dropped) chips.push(`<span class="chip tone-warn">${a.guard_dropped} dropped by guard</span>`);
+    const meta = escapeHtml(appWhen(a.created_at)) +
+      (a.jd_snippet ? ' · ' + escapeHtml(a.jd_snippet.slice(0, 90)) : '');
+    row.innerHTML =
+      `<div class="history-main">` +
+        `<div class="history-label">${escapeHtml(a.label)}</div>` +
+        `<div class="history-meta">${meta}</div>` +
+        `<div class="history-chips">${chips.join('')}</div>` +
+      `</div>`;
+
+    const side = document.createElement('div');
+    side.className = 'history-side';
+    const sel = document.createElement('select');
+    sel.className = 'history-status';
+    sel.title = 'Application status';
+    HISTORY_STATUSES.forEach((s) => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s[0].toUpperCase() + s.slice(1);
+      if ((a.status || 'saved') === s) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', async () => {
+      const prev = a.status || 'saved';
+      sel.disabled = true;
+      try {
+        const r = await fetch('/api/applications/' + encodeURIComponent(a.id), {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status: sel.value }),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        a.status = sel.value;
+        renderHistory();  // refresh counts, coloring, active filter
+      } catch (_) {
+        sel.value = prev;  // revert on failure
+      } finally {
+        sel.disabled = false;
+      }
+    });
+    side.appendChild(sel);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'history-delete';
+    del.title = 'Remove from history';
+    del.setAttribute('aria-label', 'Remove from history');
+    del.textContent = '×';
+    del.addEventListener('click', async () => {
+      try {
+        const r = await fetch('/api/applications/' + encodeURIComponent(a.id), { method: 'DELETE' });
+        if (r.ok) {
+          historyState.items = historyState.items.filter((x) => x.id !== a.id);
+          renderHistory();
+        }
+      } catch (_) { /* ignore */ }
+    });
+    side.appendChild(del);
+    row.appendChild(side);
+    return row;
+  }
+
+  document.getElementById('history-search')?.addEventListener('input', (e) => {
+    historyState.query = e.target.value;
+    renderHistory();
+  });
   loadApplications();
 </script>
 

@@ -1205,14 +1205,43 @@ label.field > .lbl {
 /* =========================================================
    APPLICATIONS TRACKER (History tab)
    ========================================================= */
+.history-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+.history-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.history-filter {
+  padding: 3px 10px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--panel); color: var(--muted);
+  font-size: 12px; cursor: pointer;
+}
+.history-filter:hover { border-color: var(--border-strong); color: var(--ink); }
+.history-filter.on {
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent);
+  font-weight: 600;
+}
+.history-search {
+  margin-left: auto;
+  min-width: 180px; flex: 1; max-width: 300px;
+  padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: var(--r);
+  font-size: 12.5px; background: var(--paper);
+}
+
 .history-list { display: flex; flex-direction: column; gap: 8px; }
 .history-row {
   display: flex; align-items: flex-start; gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   border-radius: var(--r);
   background: var(--paper);
 }
+.history-row.status-applied      { border-left-color: var(--accent); }
+.history-row.status-interviewing { border-left-color: var(--warn); }
+.history-row.status-offer        { border-left-color: var(--good); }
+.history-row.status-rejected     { border-left-color: var(--bad); }
 .history-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .history-label { font-weight: 600; font-size: 13.5px; color: var(--ink); }
 .history-meta {
@@ -1220,6 +1249,13 @@ label.field > .lbl {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .history-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.history-side { flex: none; display: flex; align-items: center; gap: 6px; }
+.history-status {
+  font-size: 12px; padding: 4px 6px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--panel); color: var(--ink); cursor: pointer;
+}
+.history-status:hover { border-color: var(--accent-line); }
 .history-delete {
   flex: none;
   width: 24px; height: 24px; line-height: 1;

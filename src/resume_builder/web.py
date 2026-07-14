@@ -475,6 +475,22 @@ def api_applications():
     return jsonify({"applications": [a.model_dump() for a in apps]})
 
 
+@app.route("/api/applications/<app_id>", methods=["PATCH"])
+def api_update_application(app_id: str):
+    """Update an application's pipeline status (saved/applied/…/rejected)."""
+    payload = request.get_json(silent=True) or {}
+    status = payload.get("status")
+    if status not in applications.STATUSES:
+        return jsonify({
+            "error": "invalid_status",
+            "valid": list(applications.STATUSES),
+        }), 400
+    updated = applications.update_status(app_id, status, _applications_path())
+    if updated is None:
+        return jsonify({"error": "not_found", "id": app_id}), 404
+    return jsonify({"ok": True, "application": updated.model_dump()})
+
+
 @app.route("/api/applications/<app_id>", methods=["DELETE"])
 def api_delete_application(app_id: str):
     """Remove one application record. 404 when the id isn't found."""

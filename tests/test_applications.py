@@ -226,3 +226,55 @@ def test_generate_records_application(client, monkeypatch):
     assert rec.ats_score is not None  # ATS captured into the log
     assert "Kubernetes platform engineer" in rec.jd_snippet
     assert rec.from_target_role is False
+
+
+# ---------- status (phase 2) ----------
+
+
+def test_status_defaults_to_saved(tmp_path):
+    app = A.record(tmp_path / "applications.json", jd_text="Some role\nbody")
+    assert app.status == "saved"
+
+
+def test_status_validator_coerces_unknown(tmp_path):
+    path = tmp_path / "applications.json"
+    path.write_text(
+        '[{"id":"x","created_at":"2026-01-01T00:00:00.000000Z","status":"bogus"}]',
+        encoding="utf-8",
+    )
+    assert A.load(path)[0].status == "saved"
+
+
+def test_update_status_sets_and_persists(tmp_path):
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Backend role\nbody")
+    updated = A.update_status(a.id, "interviewing", path)
+    assert updated is not None and updated.status == "interviewing"
+    assert A.load(path)[0].status == "interviewing"  # persisted
+
+
+def test_update_status_unknown_id_returns_none(tmp_path):
+    path = tmp_path / "applications.json"
+    A.record(path, jd_text="Role\nbody")
+    assert A.update_status("nope", "applied", path) is None
+
+
+def test_update_status_rejects_bad_value(tmp_path):
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Role\nbody")
+    with pytest.raises(ValueError):
+        A.update_status(a.id, "ghosted", path)
+
+
+def test_api_patch_status(client):
+    c, tmp_path = client
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Data role\nbody")
+
+    res = c.patch(f"/api/applications/{a.id}", json={"status": "offer"})
+    assert res.status_code == 200
+    assert res.get_json()["application"]["status"] == "offer"
+    assert A.load(path)[0].status == "offer"
+
+    assert c.patch(f"/api/applications/{a.id}", json={"status": "nope"}).status_code == 400
+    assert c.patch("/api/applications/missing", json={"status": "offer"}).status_code == 404

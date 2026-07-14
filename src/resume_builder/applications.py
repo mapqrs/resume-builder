@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .ats import ATSReport
 from .jd_signals import JDSignals
@@ -29,6 +29,10 @@ from .schema import Pointers
 
 DEFAULT_PATH = Path("applications.json")
 MAX_RECORDS = 500  # keep the file bounded; oldest fall off
+
+# Where an application is in the user's pipeline. "saved" = just generated,
+# not yet applied. The rest track the job-search funnel.
+STATUSES = ("saved", "applied", "interviewing", "offer", "rejected")
 
 
 class Application(BaseModel):
@@ -47,6 +51,13 @@ class Application(BaseModel):
     seniority: Optional[str] = None
     context: Optional[str] = None
     guard_dropped: int = 0
+    status: str = "saved"
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _clean_status(cls, v):
+        # Tolerate legacy/blank/unknown values so an old file never fails to load.
+        return v if v in STATUSES else "saved"
 
 
 def _now_iso() -> str:
@@ -156,3 +167,23 @@ def delete(app_id: str, path: Path = DEFAULT_PATH) -> bool:
         return False
     _write(path, list(reversed(kept)))  # persist chronological
     return True
+
+
+def update_status(
+    app_id: str, status: str, path: Path = DEFAULT_PATH
+) -> Optional[Application]:
+    """Set the pipeline status of one record. Returns the updated record, or
+    None if the id isn't found. Raises ValueError on an unknown status."""
+    if status not in STATUSES:
+        raise ValueError(f"unknown status {status!r}; valid: {list(STATUSES)}")
+    records = load(path)  # newest-first
+    found: Optional[Application] = None
+    for r in records:
+        if r.id == app_id:
+            r.status = status
+            found = r
+            break
+    if found is None:
+        return None
+    _write(path, list(reversed(records)))  # persist chronological
+    return found

@@ -163,17 +163,35 @@ Files: `src/resume_builder/applications.py` (new: record/load/delete, capped at
 `static/style.css`, `.gitignore`, `tests/test_applications.py` (15 new tests,
 incl. an end-to-end generation → record).
 
+### 12. Applications tracker, phase 2 — status + filter/search
+*Shipped 2026-07-12.*
+
+The History tab is now a pipeline board. Each application carries a **status**
+(saved → applied → interviewing → offer → rejected) set from a per-row dropdown,
+persisted via `PATCH /api/applications/<id>`; the row's left border is colour-coded
+by status. Above the list, **filter chips** (All + each status that occurs, with
+live counts) and a **search box** (over label + JD snippet) narrow the list
+client-side. Status is a validator-guarded field, so an old `applications.json`
+without it still loads (defaults to "saved").
+
+Files: `applications.py` (`status` field + validator, `update_status`), `web.py`
+(`PATCH /api/applications/<id>`), `templates/index.html` (toolbar + render),
+`static/style.css`, `tests/test_applications.py` (6 new tests).
+
 ---
 
 ## 🎯 High impact, next up
 
-### Applications tracker, phase 2 — richer records
+### Applications tracker, phase 3 — re-download past résumés
 **Impact: medium · Effort: small-medium**
 
-Build on the History tab: let the user re-download a past résumé (persist the
-`.docx` alongside the record, opt-in), add a company/status field
-(applied / interviewing / offer / rejected) they can set per row, and filter or
-search the list. Files: `applications.py`, `web.py`, `index.html`.
+Let the user re-download a past résumé from the History tab. Needs an **opt-in**
+"keep a copy" toggle at generate time (the web UI streams and stores nothing by
+default — that default must hold), server-side storage of the `.docx` next to the
+record, a `GET /api/applications/<id>/docx` route, and cleanup on both per-row
+delete and Delete-my-data. Deferred from phase 2 precisely because it changes the
+storage model and deserves its own careful pass. Files: `applications.py`,
+`web.py`, `index.html`.
 
 ---
 

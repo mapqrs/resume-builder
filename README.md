@@ -18,11 +18,13 @@ on every output and drops anything the source doesn't support.
 ![The tailoring studio](docs/screenshots/tailor-home.png)
 
 <details>
-<summary>More screenshots — the wizard and the template customizer</summary>
+<summary>More screenshots — the wizard, template customizer, and application tracker</summary>
 
 ![The guided wizard](docs/screenshots/wizard.png)
 
 ![Template customizer](docs/screenshots/customizer.png)
+
+![Application tracker with status pipeline](docs/screenshots/history-board.png)
 
 </details>
 
@@ -136,10 +138,11 @@ Seven panels surface after generation:
   nouns not grounded in the master) surface here too. Unlike the resume
   guard, cover-letter paragraphs are kept whole — warnings are advisory.
 - **History** — every résumé you generate is logged (the JD, its ATS
-  score, the length/seniority you used, and when), so you can see your
-  whole job search at a glance and spot which applications scored well.
-  Metadata only — no files are stored, and it's wiped by **Delete my
-  data**.
+  score, the length/seniority you used, and when). Set a **status** on
+  each (saved → applied → interviewing → offer → rejected) and
+  filter/search the list, so the tab doubles as a job-search pipeline
+  board. Metadata only — no files are stored, and it's wiped by **Delete
+  my data**.
 
 ## Make it yours
 
