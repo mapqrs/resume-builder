@@ -1249,6 +1249,11 @@ label.field > .lbl {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .history-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.chip.chip-link {
+  text-decoration: none; cursor: pointer;
+  background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent);
+}
+.chip.chip-link:hover { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 .history-side { flex: none; display: flex; align-items: center; gap: 6px; }
 .history-status {
   font-size: 12px; padding: 4px 6px;

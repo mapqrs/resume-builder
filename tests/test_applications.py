@@ -278,3 +278,103 @@ def test_api_patch_status(client):
 
     assert c.patch(f"/api/applications/{a.id}", json={"status": "nope"}).status_code == 400
     assert c.patch("/api/applications/missing", json={"status": "offer"}).status_code == 404
+
+
+# ---------- kept .docx copies / re-download (phase 3) ----------
+
+
+def test_docx_saved_defaults_false(tmp_path):
+    a = A.record(tmp_path / "applications.json", jd_text="Role\nbody")
+    assert a.docx_saved is False
+
+
+def test_save_docx_writes_file_and_flags(tmp_path):
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Backend Engineer at Acme\nGo")
+    assert A.save_docx(a.id, b"PK\x03\x04 fake", path) is True
+    assert A.docx_file(a.id, path).read_bytes() == b"PK\x03\x04 fake"
+    assert A.load(path)[0].docx_saved is True
+    assert A.docx_dir(path) == tmp_path / "application_docs"
+
+
+def test_save_docx_unknown_id_returns_false(tmp_path):
+    path = tmp_path / "applications.json"
+    A.record(path, jd_text="Role\nbody")
+    assert A.save_docx("nope", b"x", path) is False
+    assert not A.docx_file("nope", path).exists()
+
+
+def test_download_name_sanitizes_label(tmp_path):
+    path = tmp_path / "applications.json"
+    a = A.record(path, signals=JDSignals(title="Staff Backend Engineer / Payments"),
+                 jd_text="x" * 10)
+    name = A.download_name_for(A.load(path)[0])
+    assert name.endswith(".docx")
+    assert "/" not in name and " " not in name
+
+
+def test_delete_removes_kept_docx(tmp_path):
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Role\nbody")
+    A.save_docx(a.id, b"bytes", path)
+    assert A.docx_file(a.id, path).exists()
+    A.delete(a.id, path)
+    assert not A.docx_file(a.id, path).exists()
+
+
+def test_api_download_docx(client):
+    c, tmp_path = client
+    path = tmp_path / "applications.json"
+    a = A.record(path, signals=JDSignals(title="Data Engineer"), jd_text="Data role\nx")
+
+    # Not kept yet → 404.
+    assert c.get(f"/api/applications/{a.id}/docx").status_code == 404
+
+    A.save_docx(a.id, b"PK\x03\x04 docx", path)
+    res = c.get(f"/api/applications/{a.id}/docx")
+    assert res.status_code == 200
+    assert res.data == b"PK\x03\x04 docx"
+    assert "Data-Engineer.docx" in res.headers.get("Content-Disposition", "")
+
+    # Unknown id → 404.
+    assert c.get("/api/applications/missing/docx").status_code == 404
+
+
+def test_delete_my_data_wipes_kept_docx(client):
+    c, tmp_path = client
+    path = tmp_path / "applications.json"
+    a = A.record(path, jd_text="Role\nbody")
+    A.save_docx(a.id, b"bytes", path)
+    docs_dir = A.docx_dir(path)
+    assert docs_dir.exists()
+    res = c.post("/api/delete-my-data")
+    assert res.status_code in (200, 207)
+    assert not docs_dir.exists()
+    assert str(docs_dir) in res.get_json()["removed_paths"]
+
+
+def test_generate_keep_copy_opt_in(client, monkeypatch):
+    c, tmp_path = client
+    monkeypatch.setattr(
+        "resume_builder.web.tailor_auto",
+        lambda *a, **k: (_canned_tailored(), "test-provider"),
+    )
+    master_yaml = (FIXTURES / "sample-master.yaml").read_text(encoding="utf-8")
+    form = {
+        "master_yaml": master_yaml,
+        "jd_text": "Kubernetes platform engineer. Go and Postgres at scale.",
+        "length": "1page",
+    }
+
+    # Default: nothing stored.
+    assert c.post("/api/generate", data=form).status_code == 200
+    rec = A.load(tmp_path / "applications.json")[0]
+    assert rec.docx_saved is False
+    assert not A.docx_dir(tmp_path / "applications.json").exists()
+
+    # Opt in: a copy is kept and re-downloadable.
+    assert c.post("/api/generate", data={**form, "keep_docx": "on"}).status_code == 200
+    kept = A.load(tmp_path / "applications.json")[0]
+    assert kept.docx_saved is True
+    dl = c.get(f"/api/applications/{kept.id}/docx")
+    assert dl.status_code == 200 and dl.data[:2] == b"PK"  # a real .docx zip

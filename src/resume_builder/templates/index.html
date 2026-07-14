@@ -330,7 +330,11 @@
         <button type="button" class="btn" id="btn-generate-cover">
           Cover letter
         </button>
-        <label class="radio" style="margin-left: auto;" title="Also convert .docx to PDF (requires Word or LibreOffice). Bock recommends PDF for ATS submissions.">
+        <label class="radio" style="margin-left: auto;" title="Keep the rendered .docx on your machine (in application_docs/) so you can re-download it from the History tab. Off by default — nothing is stored unless you tick this.">
+          <input type="checkbox" id="opt-keep-docx" name="keep_docx">
+          <span>Keep a copy</span>
+        </label>
+        <label class="radio" title="Also convert .docx to PDF (requires Word or LibreOffice). Bock recommends PDF for ATS submissions.">
           <input type="checkbox" id="opt-also-pdf">
           <span>Also PDF</span>
           <span class="hint" id="pdf-availability"></span>
@@ -1713,6 +1717,7 @@
     if (a.seniority) chips.push(`<span class="chip">${escapeHtml(a.seniority)}</span>`);
     if (a.from_target_role) chips.push(`<span class="chip">target role</span>`);
     if (a.guard_dropped) chips.push(`<span class="chip tone-warn">${a.guard_dropped} dropped by guard</span>`);
+    if (a.docx_saved) chips.push(`<a class="chip chip-link" href="/api/applications/${encodeURIComponent(a.id)}/docx" title="Re-download the copy you kept">↓ .docx</a>`);
     const meta = escapeHtml(appWhen(a.created_at)) +
       (a.jd_snippet ? ' · ' + escapeHtml(a.jd_snippet.slice(0, 90)) : '');
     row.innerHTML =
@@ -1788,7 +1793,7 @@
     Your data stays on this machine. Prompts are sent to Anthropic only when you click Generate.
   </span>
   <button type="button" id="btn-delete-my-data" class="link-button"
-          title="Wipe sessions/, master.yaml.bak.*, and drafts/. Your current master.yaml stays.">
+          title="Wipe sessions/, master.yaml.bak.*, drafts/, the applications log, and any kept .docx copies. Your current master.yaml stays.">
     Delete my data
   </button>
 </footer>

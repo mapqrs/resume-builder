@@ -141,8 +141,9 @@ Seven panels surface after generation:
   score, the length/seniority you used, and when). Set a **status** on
   each (saved → applied → interviewing → offer → rejected) and
   filter/search the list, so the tab doubles as a job-search pipeline
-  board. Metadata only — no files are stored, and it's wiped by **Delete
-  my data**.
+  board. Metadata only by default; tick **Keep a copy** before Generate
+  to also store that `.docx` locally for one-click re-download later.
+  Everything here is wiped by **Delete my data**.
 
 ## Make it yours
 

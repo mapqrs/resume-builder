@@ -270,6 +270,7 @@ def _docx_response(
     signals: JDSignals | None = None,
     jd_text: str | None = None,
     from_target_role: bool = False,
+    keep_docx: bool = False,
 ):
     """Render the docx, stream it, attach guard + lint + JD signal data as headers,
     and stash the result in the cache so /api/diff can read it back.
@@ -344,9 +345,10 @@ def _docx_response(
         resp.headers["X-Result-Id"] = rid
         exposed.append("X-Result-Id")
         # Log the application (best-effort — a logging failure must never break
-        # the download the user is waiting on).
+        # the download the user is waiting on). When the user opted to keep a
+        # copy, also persist the .docx bytes for later re-download.
         try:
-            applications.record(
+            logged = applications.record(
                 _applications_path(),
                 signals=signals,
                 pointers=pointers,
@@ -355,6 +357,8 @@ def _docx_response(
                 from_target_role=from_target_role,
                 guard_dropped=len(guard_warnings or []),
             )
+            if keep_docx:
+                applications.save_docx(logged.id, payload, _applications_path())
         except Exception:  # noqa: BLE001
             pass
     if exposed:
@@ -491,9 +495,27 @@ def api_update_application(app_id: str):
     return jsonify({"ok": True, "application": updated.model_dump()})
 
 
+@app.route("/api/applications/<app_id>/docx", methods=["GET"])
+def api_application_docx(app_id: str):
+    """Re-download a kept .docx copy (only exists if the user opted in)."""
+    path = _applications_path()
+    record = next((a for a in applications.load(path) if a.id == app_id), None)
+    if record is None or not record.docx_saved:
+        abort(404, description="no kept copy for this application")
+    docx_path = applications.docx_file(app_id, path)
+    if not docx_path.is_file():
+        abort(404, description="kept copy is missing")
+    return send_file(
+        docx_path,
+        as_attachment=True,
+        download_name=applications.download_name_for(record),
+        mimetype=DOCX_MIME,
+    )
+
+
 @app.route("/api/applications/<app_id>", methods=["DELETE"])
 def api_delete_application(app_id: str):
-    """Remove one application record. 404 when the id isn't found."""
+    """Remove one application record (and any kept .docx). 404 if not found."""
     if not applications.delete(app_id, _applications_path()):
         return jsonify({"error": "not_found", "id": app_id}), 404
     return jsonify({"ok": True, "deleted": app_id})
@@ -519,6 +541,7 @@ def api_generate():
         }), 400
 
     used_target_role = not jd_text and target_role is not None
+    keep_docx = request.form.get("keep_docx") in ("1", "true", "on", "yes")
     try:
         jd_text, signals = _jd_and_signals_for_input(jd_text, target_role)
     except ValueError as e:
@@ -563,6 +586,7 @@ def api_generate():
         master, template, guard.cleaned, "resume.docx",
         pointers=pointers, guard_warnings=guard.warnings,
         signals=signals, jd_text=jd_text, from_target_role=used_target_role,
+        keep_docx=keep_docx,
     )
 
 
@@ -609,6 +633,7 @@ def api_from_response():
         }), 400
 
     used_target_role = not jd_text and target_role is not None
+    keep_docx = request.form.get("keep_docx") in ("1", "true", "on", "yes")
     try:
         jd_text, signals = _jd_and_signals_for_input(jd_text, target_role)
     except ValueError as e:
@@ -624,6 +649,7 @@ def api_from_response():
         master, template, guard.cleaned, "resume.docx",
         pointers=pointers, guard_warnings=guard.warnings,
         signals=signals, jd_text=jd_text, from_target_role=used_target_role,
+        keep_docx=keep_docx,
     )
 
 
@@ -1172,6 +1198,15 @@ def api_delete_my_data():
             removed.append(str(apps_file))
         except OSError as e:
             errors.append(f"could not remove {apps_file}: {e}")
+
+    # 5. application_docs/ — any kept .docx copies (opt-in re-download).
+    docs_dir = applications.docx_dir(apps_file)
+    if docs_dir.exists() and docs_dir.is_dir():
+        try:
+            _shutil.rmtree(docs_dir)
+            removed.append(str(docs_dir))
+        except OSError as e:
+            errors.append(f"could not remove {docs_dir}: {e}")
 
     payload = {
         "removed_paths": removed,

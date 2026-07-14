@@ -6,9 +6,11 @@ the ATS coverage score, the per-run pointers, and a timestamp — so the tool
 becomes a job-search companion you return to per application, not a one-shot
 generator.
 
-Metadata only: no résumé files are stored (the web UI streams the ``.docx`` to
-your browser). The log lives next to ``master.yaml`` / ``pointers.yaml`` and is
-wiped by the Delete-my-data button.
+Metadata only by default: the web UI streams the ``.docx`` and stores nothing.
+You can opt into **keeping a copy** per generation (the "keep a copy" toggle) —
+those files live in ``application_docs/<id>.docx`` next to the log so you can
+re-download later. Both the log and any kept copies live next to ``master.yaml``
+and are wiped by the Delete-my-data button.
 """
 
 from __future__ import annotations
@@ -52,6 +54,9 @@ class Application(BaseModel):
     context: Optional[str] = None
     guard_dropped: int = 0
     status: str = "saved"
+    # True when the user opted to keep the rendered .docx (in application_docs/)
+    # for re-download. Default is store-nothing.
+    docx_saved: bool = False
 
     @field_validator("status", mode="before")
     @classmethod
@@ -160,13 +165,54 @@ def record(
 
 
 def delete(app_id: str, path: Path = DEFAULT_PATH) -> bool:
-    """Remove one record by id. Returns True if something was removed."""
+    """Remove one record by id (and any kept .docx). Returns True if removed."""
     records = load(path)
     kept = [r for r in records if r.id != app_id]
     if len(kept) == len(records):
         return False
     _write(path, list(reversed(kept)))  # persist chronological
+    try:
+        docx_file(app_id, path).unlink()
+    except OSError:
+        pass  # no kept copy, or already gone
     return True
+
+
+# ---------- kept .docx copies (opt-in re-download) ----------
+
+
+_FILENAME_SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def docx_dir(path: Path = DEFAULT_PATH) -> Path:
+    """Directory holding kept .docx copies, alongside ``applications.json``."""
+    return Path(path).parent / "application_docs"
+
+
+def docx_file(app_id: str, path: Path = DEFAULT_PATH) -> Path:
+    return docx_dir(path) / f"{app_id}.docx"
+
+
+def save_docx(app_id: str, data: bytes, path: Path = DEFAULT_PATH) -> bool:
+    """Persist the rendered .docx for one record and flag it ``docx_saved``.
+
+    Opt-in only — callers gate this on the user's "keep a copy" choice.
+    Returns False if the id isn't found (nothing written)."""
+    records = load(path)
+    target = next((r for r in records if r.id == app_id), None)
+    if target is None:
+        return False
+    docx_dir(path).mkdir(parents=True, exist_ok=True)
+    docx_file(app_id, path).write_bytes(data)
+    target.docx_saved = True
+    _write(path, list(reversed(records)))  # persist chronological
+    return True
+
+
+def download_name_for(app: Application) -> str:
+    """A filesystem-safe, human-friendly download filename from the label."""
+    base = _FILENAME_SAFE.sub("-", app.label or "resume").strip("-") or "resume"
+    return f"{base[:60]}.docx"
 
 
 def update_status(

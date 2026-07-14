@@ -178,20 +178,29 @@ Files: `applications.py` (`status` field + validator, `update_status`), `web.py`
 (`PATCH /api/applications/<id>`), `templates/index.html` (toolbar + render),
 `static/style.css`, `tests/test_applications.py` (6 new tests).
 
+### 13. Applications tracker, phase 3 — opt-in re-download
+*Shipped 2026-07-14.*
+
+Re-download a past résumé from the History tab. A **"Keep a copy"** checkbox by
+Generate (off by default — the store-nothing default holds) makes the server
+persist the rendered `.docx` to `application_docs/<id>.docx` next to the log and
+flag the record `docx_saved`; kept cards show a **↓ .docx** link that serves the
+file via `GET /api/applications/<id>/docx` with a label-derived filename. Cleaned
+up on both per-row delete and Delete-my-data; `application_docs/` is gitignored so
+copies never reach the repo.
+
+Files: `applications.py` (`docx_saved` field, `save_docx`/`docx_file`/`docx_dir`/
+`download_name_for`, delete-cleanup), `web.py` (`keep_docx` plumbing, `GET
+/api/applications/<id>/docx`, delete-my-data), `templates/index.html`,
+`static/style.css`, `.gitignore`, `tests/test_applications.py` (8 new tests).
+
 ---
 
 ## 🎯 High impact, next up
 
-### Applications tracker, phase 3 — re-download past résumés
-**Impact: medium · Effort: small-medium**
-
-Let the user re-download a past résumé from the History tab. Needs an **opt-in**
-"keep a copy" toggle at generate time (the web UI streams and stores nothing by
-default — that default must hold), server-side storage of the `.docx` next to the
-record, a `GET /api/applications/<id>/docx` route, and cleanup on both per-row
-delete and Delete-my-data. Deferred from phase 2 precisely because it changes the
-storage model and deserves its own careful pass. Files: `applications.py`,
-`web.py`, `index.html`.
+*The adoption backlog (setup, import, sessions gallery, applications tracker) is
+shipped. Next candidates come from real usage — see Smaller polish below, or the
+DX/hosting notes in `docs/PRODUCTION.md`.*
 
 ---
 
